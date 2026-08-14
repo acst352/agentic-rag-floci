@@ -1,0 +1,1 @@
+{"errorMessage":"Failed to start Lambda container: java.net.BindException: Permission denied","errorType":"Lambda.InitError"}
