@@ -256,11 +256,33 @@ Fix: usar modelo más pequeño (`qwen2.5:1.5b`) o tener paciencia
 ## Próximos pasos
 
 - [ ] Hacer al agente un contenedor en `net-aws-sim` (más fiel a prod).
-- [ ] Añadir autenticación al SSE endpoint (HMAC token compartido).
+- [x] **v1.1.0** — Autenticación HMAC en `GET /api/chat/stream`. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
 - [ ] Sustituir Ollama por Bedrock en producción (cambiar `OLLAMA_HOST` →
       `BEDROCK_ENDPOINT`, swap del cliente).
 - [ ] Pipeline de ingesta continuo (S3 → embeddings → pgvector).
 - [ ] CI/CD: Floci + Ollama en GitHub Actions para tests E2E.
+
+### HMAC auth quick reference
+
+`GET /api/chat/stream` exige tres headers:
+
+```
+X-Floci-Timestamp: <epoch seconds>
+X-Floci-Key-Id:    <HMAC_KEY_ID>
+X-Floci-Signature: hex(HMAC_SHA256(HMAC_SECRET, "<ts>\nGET\n/api/chat/stream\n<sha256(body)>"))
+```
+
+Configurar el secreto antes de `make up`:
+
+```bash
+export HMAC_SECRET=$(openssl rand -hex 32)
+export HMAC_KEY_ID=local-dev
+make up
+```
+
+La UI (`public/script.js`) firma automáticamente; no hay nada que cambiar
+en el navegador. Para integradores externos hay ejemplos de `curl` y un
+helper de Python en `docs/hmac-auth.md`.
 
 ## Referencias
 
