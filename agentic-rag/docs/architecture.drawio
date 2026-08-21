@@ -1,10 +1,10 @@
 <mxfile host="65bd71144e">
-    <diagram id="agentic-rag-architecture" name="Architecture v1.0.0">
-        <mxGraphModel dx="2155" dy="990" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+    <diagram id="agentic-rag-architecture" name="Architecture v1.1.0">
+        <mxGraphModel dx="852" dy="632" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="title" value="Agentic RAG — Local $0 Stack (v1.0.0 MVP)" style="text;html=1;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fillColor=none;strokeColor=none;" parent="1" vertex="1">
+                <mxCell id="title" value="Agentic RAG — Local $0 Stack (v1.1.0)" style="text;html=1;align=center;verticalAlign=middle;fontSize=22;fontStyle=1;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="60" y="30" width="1480" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="subtitle" value="Floci + Ollama + pgvector + MCP. Emulación de arquitectura híbrida AWS ↔ On-Premises con aislamiento de redes via Docker." style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontColor=#5a6776;fillColor=none;strokeColor=none;" parent="1" vertex="1">
@@ -22,34 +22,34 @@
                 <mxCell id="vpc_onprem" value="On-Premises: net-onprem-sim" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#3b82f6;dashed=1;dashPattern=8 4;verticalAlign=top;fontSize=16;fontStyle=1;align=left;spacingLeft=10;spacingTop=8;strokeWidth=2;fontColor=#232f3e;" parent="1" vertex="1">
                     <mxGeometry x="920" y="150" width="620" height="780" as="geometry"/>
                 </mxCell>
-                <mxCell id="public_subnet_aws" value="aws-sim subnet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3d6;strokeColor=#e8a64a;dashed=1;dashPattern=4 4;verticalAlign=top;fontSize=12;fontStyle=1;align=left;spacingLeft=10;spacingTop=6;fontColor=#7a5a14;" vertex="1" parent="1">
+                <mxCell id="public_subnet_aws" value="aws-sim subnet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3d6;strokeColor=#e8a64a;dashed=1;dashPattern=4 4;verticalAlign=top;fontSize=12;fontStyle=1;align=left;spacingLeft=10;spacingTop=6;fontColor=#7a5a14;" parent="1" vertex="1">
                     <mxGeometry x="100" y="200" width="650" height="320" as="geometry"/>
                 </mxCell>
-                <mxCell id="private_subnet_onprem" value="onprem-sim subnet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0ecff;strokeColor=#3b82f6;dashed=1;dashPattern=4 4;verticalAlign=top;fontSize=12;fontStyle=1;align=left;spacingLeft=10;spacingTop=6;fontColor=#1e3a8a;" vertex="1" parent="1">
+                <mxCell id="private_subnet_onprem" value="onprem-sim subnet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0ecff;strokeColor=#3b82f6;dashed=1;dashPattern=4 4;verticalAlign=top;fontSize=12;fontStyle=1;align=left;spacingLeft=10;spacingTop=6;fontColor=#1e3a8a;" parent="1" vertex="1">
                     <mxGeometry x="960" y="200" width="550" height="280" as="geometry"/>
                 </mxCell>
-                <mxCell id="browser" value="" style="sketch=0;outlineConnect=0;html=1;dashed=0;labelPosition=right;align=left;verticalLabelPosition=middle;verticalAlign=middle;shape=mxgraph.mscae.generic.user;fillColor=#0078D4;strokeColor=none;pointerEvents=1;" vertex="1" parent="1">
+                <mxCell id="browser" value="" style="sketch=0;outlineConnect=0;html=1;dashed=0;labelPosition=right;align=left;verticalLabelPosition=middle;verticalAlign=middle;shape=mxgraph.mscae.generic.user;fillColor=#0078D4;strokeColor=none;pointerEvents=1;" parent="1" vertex="1">
                     <mxGeometry x="120" y="537" width="60" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="browser_label" value="Browser&#xa;(localhost:3002)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="browser_label" value="Browser&#xa;(localhost:3002)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="100" y="600" width="100" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="browser_sub" value="UI web&#xa;ChatGPT-style" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="browser_sub" value="UI web&#xa;ChatGPT-style&#xa;+ Web Crypto signer" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="100" y="640" width="100" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="floci_label" value="floci&#xa;Amazon DynamoDB&#xa;:4566" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="610" y="322" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="floci_sub" value="sesiones persistidas" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="floci_sub" value="sesiones persistidas" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="620" y="378" width="120" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="agent_api" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;" vertex="1" parent="1">
+                <mxCell id="agent_api" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;" parent="1" vertex="1">
                     <mxGeometry x="320" y="245" width="78" height="78" as="geometry"/>
                 </mxCell>
-                <mxCell id="agent_api_label" value="agent-api&#xa;Amazon ECS task&#xa;Fastify :3002" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="agent_api_label" value="agent-api&#xa;Amazon ECS task&#xa;Fastify :3002" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="190" y="310" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="agent_api_sub" value="UI web + API REST&#xa;tool calling loop" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="agent_api_sub" value="UI web + API REST&#xa;tool calling loop&#xa;+ HMAC middleware" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="200" y="358" width="120" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="postgres" value="" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws3.rds;fillColor=#2E73B8;gradientColor=none;" parent="1" vertex="1">
@@ -64,30 +64,30 @@
                 <mxCell id="ollama_label" value="rag-ollama&#xa;Amazon Bedrock&#xa;qwen2.5:3b + nomic-embed&#xa;:11434" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="1272" y="358" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="mcp_server" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#3b82f6;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;strokeWidth=2;" vertex="1" parent="1">
+                <mxCell id="mcp_server" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#ED7100;strokeColor=#3b82f6;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;strokeWidth=2;" parent="1" vertex="1">
                     <mxGeometry x="810" y="430" width="78" height="78" as="geometry"/>
                 </mxCell>
-                <mxCell id="mcp_server_label" value="mcp-server&#xa;Amazon ECS task&#xa;:3001 (gateway)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=#ffffff;strokeColor=#3b82f6;rounded=1;" vertex="1" parent="1">
+                <mxCell id="mcp_server_label" value="mcp-server&#xa;Amazon ECS task&#xa;:3001 (gateway)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=1;fillColor=#ffffff;strokeColor=#3b82f6;rounded=1;" parent="1" vertex="1">
                     <mxGeometry x="765" y="530" width="171" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="mcp_server_sub" value="tools/search_documents&#xa;Tool: pgvector + embeddings" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="mcp_server_sub" value="tools/search_documents&#xa;Tool: pgvector + embeddings" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fontColor=#5a6776;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="780.5" y="610" width="140" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="vpn_icon" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.site_to_site_vpn;" vertex="1" parent="1">
+                <mxCell id="vpn_icon" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.site_to_site_vpn;" parent="1" vertex="1">
                     <mxGeometry x="1870" y="140" width="60" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="vpn_label" value="VPN simulada&#xa;(Docker bridge networks)" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="1370" y="660" width="100" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="e_browser_agent" value="HTTPS&#xa;EventSource" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;strokeColor=#0078D4;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="browser" target="agent_api">
+                <mxCell id="e_browser_agent" value="HTTPS&#xa;EventSource + HMAC&#xa;(X-Floci-Signature)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;strokeColor=#0078D4;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="browser" target="agent_api" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="360" y="340" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e_agent_mcp" value="SSE&#xa;tools" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3b82f6;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="agent_api" target="mcp_server">
+                <mxCell id="e_agent_mcp" value="SSE&#xa;tools" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3b82f6;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="agent_api" target="mcp_server" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e_agent_ollama" value="HTTP chat&#xa;(tool calling)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#01A88D;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;dashed=1;dashPattern=4 3;exitPerimeter=0;entryPerimeter=0;" edge="1" parent="1" source="agent_api" target="ollama">
+                <mxCell id="e_agent_ollama" value="HTTP chat&#xa;(tool calling)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#01A88D;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;dashed=1;dashPattern=4 3;exitPerimeter=0;entryPerimeter=0;" parent="1" source="agent_api" target="ollama" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint y="-50" as="offset"/>
                         <Array as="points">
@@ -107,7 +107,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e_mcp_pg" value="SQL&#xa;pgvector" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeColor=#2E73B8;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="mcp_server" target="postgres">
+                <mxCell id="e_mcp_pg" value="SQL&#xa;pgvector" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeColor=#2E73B8;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;" parent="1" source="mcp_server" target="postgres" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="1010" y="450"/>
@@ -115,7 +115,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e_mcp_ollama" value="HTTP&#xa;embeddings" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeColor=#01A88D;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;exitPerimeter=0;" edge="1" parent="1" source="mcp_server" target="ollama">
+                <mxCell id="e_mcp_ollama" value="HTTP&#xa;embeddings" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeColor=#01A88D;strokeWidth=2;endArrow=classic;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;exitPerimeter=0;" parent="1" source="mcp_server" target="ollama" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="970" y="469"/>
@@ -124,10 +124,10 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="v1_box" value="✅ v1.0.0 — MVP production-ready&lt;br&gt;&lt;br&gt;• agent-api corre como contenedor Docker persistente&lt;br&gt;• UI web interactiva con SSE streaming&lt;br&gt;• Tool calling: qwen2.5:3b + search_documents&lt;br&gt;• Sesiones persistidas en DynamoDB (Floci)&lt;br&gt;• Aislamiento de redes verificado&lt;br&gt;&lt;br&gt;✅ v1.1.0 — HMAC auth en /api/chat/stream&lt;br&gt;Próximo:&lt;br&gt;v1.2.0 — Pipeline ingesta S3&lt;br&gt;v2.0.0 — Bedrock swap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#22c55e;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
-                    <mxGeometry x="100" y="700" width="650" height="180" as="geometry"/>
+                <mxCell id="v1_box" value="✅ v1.0.0 — MVP production-ready&lt;br&gt;&lt;br&gt;• agent-api corre como contenedor Docker persistente&lt;br&gt;• UI web interactiva con SSE streaming&lt;br&gt;• Tool calling: qwen2.5:3b + search_documents&lt;br&gt;• Sesiones persistidas en DynamoDB (Floci)&lt;br&gt;• Aislamiento de redes verificado&lt;br&gt;&lt;br&gt;✅ v1.1.0 — HMAC auth en /api/chat/stream" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#22c55e;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="700" width="310" height="180" as="geometry"/>
                 </mxCell>
-                <mxCell id="net_box" value="Docker compose (5 servicios, 2 redes):&#xa;&#xa;net-aws-sim:        floci, agent-api, mcp-server&#xa;net-onprem-sim:     postgres, ollama, mcp-server, agent-api&#xa;&#xa;agent-api vive en AMBAS redes (como mcp-server):&#xa;  en producción AWS, Bedrock está en AWS → el agente lo&#xa;  accede directamente. Aquí Ollama está on-prem, así que el&#xa;  agente necesita visibilidad cross-network." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" vertex="1" parent="1">
+                <mxCell id="net_box" value="Docker compose (5 servicios, 2 redes):&#xa;&#xa;net-aws-sim:        floci, agent-api, mcp-server&#xa;net-onprem-sim:     postgres, ollama, mcp-server, agent-api&#xa;&#xa;agent-api vive en AMBAS redes (como mcp-server):&#xa;  en producción AWS, Bedrock está en AWS → el agente lo&#xa;  accede directamente. Aquí Ollama está on-prem, así que el&#xa;  agente necesita visibilidad cross-network." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" parent="1" vertex="1">
                     <mxGeometry x="960" y="640" width="550" height="160" as="geometry"/>
                 </mxCell>
                 <mxCell id="legend_box" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;" parent="1" vertex="1">
@@ -139,74 +139,77 @@
                 <mxCell id="legend_text" value="AWS Lambda/ECS = agent-api (Fastify) · Amazon ECS = rag-mcp-server (gateway) · Amazon RDS = rag-postgres+pgvector · Amazon Bedrock = rag-ollama · Amazon DynamoDB = floci · Site-to-Site VPN = Docker bridge networks" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#5a6776;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="75" y="978" width="1450" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="conv_http" style="endArrow=classic;html=1;strokeColor=#0078D4;strokeWidth=2;" edge="1" parent="1">
+                <mxCell id="conv_http" style="endArrow=classic;html=1;strokeColor=#0078D4;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="75" y="1010" as="sourcePoint"/>
                         <mxPoint x="135" y="1010" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="conv_http_label" value="HTTPS / SSE" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="conv_http_label" value="HTTPS / SSE" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="140" y="1000" width="120" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="conv_chat" style="endArrow=classic;html=1;strokeColor=#01A88D;strokeWidth=2;dashed=1;dashPattern=4 3;" edge="1" parent="1">
+                <mxCell id="conv_chat" style="endArrow=classic;html=1;strokeColor=#01A88D;strokeWidth=2;dashed=1;dashPattern=4 3;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="280" y="1010" as="sourcePoint"/>
                         <mxPoint x="340" y="1010" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="conv_chat_label" value="HTTP chat (LLM)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="conv_chat_label" value="HTTP chat (LLM)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="345" y="1000" width="120" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="conv_sql" style="endArrow=classic;html=1;strokeColor=#2E73B8;strokeWidth=2;" edge="1" parent="1">
+                <mxCell id="conv_sql" style="endArrow=classic;html=1;strokeColor=#2E73B8;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="490" y="1010" as="sourcePoint"/>
                         <mxPoint x="550" y="1010" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="conv_sql_label" value="SQL" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="conv_sql_label" value="SQL" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="555" y="1000" width="120" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="conv_ddb" style="endArrow=classic;html=1;strokeColor=#8C4FFF;strokeWidth=2;" edge="1" parent="1">
+                <mxCell id="conv_ddb" style="endArrow=classic;html=1;strokeColor=#8C4FFF;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="700" y="1010" as="sourcePoint"/>
                         <mxPoint x="760" y="1010" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="conv_ddb_label" value="DynamoDB API (persistencia)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="conv_ddb_label" value="DynamoDB API (persistencia)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="765" y="1000" width="200" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="conv_tools" style="endArrow=classic;html=1;strokeColor=#3b82f6;strokeWidth=2;" edge="1" parent="1">
+                <mxCell id="conv_tools" style="endArrow=classic;html=1;strokeColor=#3b82f6;strokeWidth=2;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="990" y="1010" as="sourcePoint"/>
                         <mxPoint x="1050" y="1010" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="conv_tools_label" value="MCP SSE (tools/RAG)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="conv_tools_label" value="MCP SSE (tools/RAG)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="1055" y="1000" width="160" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="conv_vpn_legend" style="endArrow=classic;html=1;strokeColor=#1e3a8a;strokeWidth=2;dashed=1;dashPattern=8 4;" edge="1" parent="1">
+                <mxCell id="conv_vpn_legend" style="endArrow=classic;html=1;strokeColor=#1e3a8a;strokeWidth=2;dashed=1;dashPattern=8 4;" parent="1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="1240" y="1010" as="sourcePoint"/>
                         <mxPoint x="1300" y="1010" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="conv_vpn_legend_label" value="Red Docker (simula VPN)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="conv_vpn_legend_label" value="Red Docker (simula VPN)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="1305" y="1000" width="180" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="repo_note" value="Diagram source: docs/architecture.drawio · Generado para v1.0.0 (MVP production-ready)" style="text;html=1;align=right;verticalAlign=middle;fontSize=9;fontStyle=2;fontColor=#9ca3af;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+                <mxCell id="repo_note" value="Diagram source: docs/architecture.drawio · Generado para v1.1.0 (HMAC auth)" style="text;html=1;align=right;verticalAlign=middle;fontSize=9;fontStyle=2;fontColor=#9ca3af;fillColor=none;strokeColor=none;" parent="1" vertex="1">
                     <mxGeometry x="1140" y="1060" width="400" height="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="mcp_server_nets" value="🔗 net-aws-sim + net-onprem-sim" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=1;fontColor=#1e3a8a;fillColor=#e0ecff;strokeColor=#3b82f6;rounded=1;" vertex="1" parent="1">
+                <mxCell id="mcp_server_nets" value="🔗 net-aws-sim + net-onprem-sim" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=1;fontColor=#1e3a8a;fillColor=#e0ecff;strokeColor=#3b82f6;rounded=1;" parent="1" vertex="1">
                     <mxGeometry x="770.5" y="660" width="160" height="20" as="geometry"/>
                 </mxCell>
                 <mxCell id="floci" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" parent="1" vertex="1">
                     <mxGeometry x="570" y="245" width="78" height="78" as="geometry"/>
                 </mxCell>
-                <mxCell id="22" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://www.cyberclick.es/hs-fs/hubfs/04.%20BLOG/ollama-para-que-sirve.png?width=800&amp;height=276&amp;name=ollama-para-que-sirve.png;" vertex="1" parent="1">
+                <mxCell id="22" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://www.cyberclick.es/hs-fs/hubfs/04.%20BLOG/ollama-para-que-sirve.png?width=800&amp;height=276&amp;name=ollama-para-que-sirve.png;" parent="1" vertex="1">
                     <mxGeometry x="1350" y="270" width="104.35" height="36" as="geometry"/>
                 </mxCell>
-                <mxCell id="23" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://elysian01.github.io/Rasa-Chatbot-UI/static/img/homepage-bot.png;" vertex="1" parent="1">
+                <mxCell id="23" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://elysian01.github.io/Rasa-Chatbot-UI/static/img/homepage-bot.png;" parent="1" vertex="1">
                     <mxGeometry x="120" y="530" width="70" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" value="Próximo:&lt;br&gt;v1.2.0 — Pipeline ingesta S3&lt;br&gt;v2.0.0 — Bedrock swap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CCFFFF;strokeColor=#22c55e;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+                    <mxGeometry x="421" y="700" width="319" height="180" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
