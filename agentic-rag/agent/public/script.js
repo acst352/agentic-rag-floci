@@ -3,7 +3,7 @@
 // Endpoints:
 //   POST /api/sessions                       → { session_id, created_at }
 //   GET  /api/sessions/:id                   → { ... } | 404
-//   GET  /api/chat/stream?q=...&session_id=...  → SSE
+//   GET  /api/chat/stream?q=...&session_id=...  → SSE (HMAC signed, v1.1.0+)
 //
 // SSE events:
 //   token       → { token: "ch" }
@@ -11,6 +11,13 @@
 //   tool_result → { name, result, ms }
 //   done        → { session_id, iterations, totalMs }
 //   error       → { message }
+//
+// HMAC auth (v1.1.0):
+//   Bootstrap: GET /api/auth/config → { keyId, secret, windowSeconds, enabled }
+//   For each /api/chat/stream request, compute HMAC-SHA256 over:
+//     `${timestamp}\n${method}\n${path}\n${sha256(body)}`
+//   and send headers: X-Floci-Timestamp, X-Floci-Key-Id, X-Floci-Signature.
+//   Implementation uses Web Crypto (SubtleCrypto) — no external deps.
 
 const sidebar = document.getElementById('sidebar');
 const toggleSidebar = document.getElementById('toggleSidebar');
@@ -28,6 +35,68 @@ const sessionIdDisplay = document.getElementById('session-id-display');
 let sessionId = null;
 let activeStream = null;
 let busy = false;
+
+const HMAC_TS_HEADER = 'X-Floci-Timestamp';
+const HMAC_KEY_HEADER = 'X-Floci-Key-Id';
+const HMAC_SIG_HEADER = 'X-Floci-Signature';
+
+let hmacConfig = null;
+
+async function sha256Hex(input) {
+    const bytes = new TextEncoder().encode(input);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+async function hmacSha256Hex(secret, input) {
+    const keyBytes = new TextEncoder().encode(secret);
+    const key = await crypto.subtle.importKey(
+        'raw',
+        keyBytes,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign'],
+    );
+    const data = new TextEncoder().encode(input);
+    const sig = await crypto.subtle.sign('HMAC', key, data);
+    return Array.from(new Uint8Array(sig))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+async function signRequest(method, path, body) {
+    if (!hmacConfig || !hmacConfig.enabled) return {};
+    const timestamp = Math.floor(Date.now() / 1000);
+    const bodyStr = body ?? '';
+    const bodyHash = await sha256Hex(bodyStr);
+    const canonical = `${timestamp}\n${method.toUpperCase()}\n${path}\n${bodyHash}`;
+    const signature = await hmacSha256Hex(hmacConfig.secret, canonical);
+    return {
+        [HMAC_TS_HEADER]: String(timestamp),
+        [HMAC_KEY_HEADER]: hmacConfig.keyId,
+        [HMAC_SIG_HEADER]: signature,
+    };
+}
+
+async function bootstrapHmac() {
+    try {
+        const r = await fetch('/api/auth/config', { cache: 'no-store' });
+        if (r.status === 204) {
+            hmacConfig = { enabled: false };
+            return;
+        }
+        if (!r.ok) throw new Error(`GET /api/auth/config → ${r.status}`);
+        hmacConfig = await r.json();
+        if (!hmacConfig.enabled) {
+            hmacConfig = { enabled: false };
+        }
+    } catch (err) {
+        console.error('HMAC bootstrap failed; UI will fail to sign stream requests', err);
+        hmacConfig = { enabled: false };
+    }
+}
 
 // ─── Sidebar ────────────────────────────────────────────────
 toggleSidebar.addEventListener('click', () => {
@@ -202,6 +271,45 @@ function replaceTypingWithMessage(id, content, meta) {
     return addMessage('assistant', content, meta);
 }
 
+// ─── SSE parsing ───────────────────────────────────────────
+function parseSseStream(reader, handlers) {
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    function processEvent(eventName, dataLine) {
+        const handler = handlers[eventName];
+        if (!handler) return;
+        try {
+            const data = dataLine.startsWith('{') ? JSON.parse(dataLine) : dataLine;
+            handler(data);
+        } catch (err) {
+            console.error('SSE parse error', eventName, err);
+        }
+    }
+
+    return (async () => {
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            let sep;
+            while ((sep = buffer.indexOf('\n\n')) !== -1) {
+                const rawEvent = buffer.slice(0, sep);
+                buffer = buffer.slice(sep + 2);
+
+                let eventName = 'message';
+                let dataLine = '';
+                for (const line of rawEvent.split('\n')) {
+                    if (line.startsWith('event:')) eventName = line.slice(6).trim();
+                    else if (line.startsWith('data:')) dataLine += line.slice(5).trim();
+                }
+                if (dataLine) processEvent(eventName, dataLine);
+            }
+        }
+    })();
+}
+
 // ─── Submit → streaming ─────────────────────────────────────
 composerForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -218,63 +326,95 @@ composerForm.addEventListener('submit', (e) => {
 });
 
 async function streamChat(question) {
-    const url = `/api/chat/stream?q=${encodeURIComponent(question)}&session_id=${encodeURIComponent(sessionId)}`;
-    const es = new EventSource(url);
+    const path = '/api/chat/stream';
+    const url = `${path}?q=${encodeURIComponent(question)}&session_id=${encodeURIComponent(sessionId)}`;
 
-    // Prepare a live assistant bubble that we update as tokens arrive
+    let headers = { Accept: 'text/event-stream' };
+    try {
+        const sig = await signRequest('GET', path, '');
+        headers = { ...headers, ...sig };
+    } catch (err) {
+        console.error('Failed to sign request', err);
+    }
+
+    let response;
+    try {
+        response = await fetch(url, { method: 'GET', headers });
+    } catch (err) {
+        console.error('fetch failed', err);
+        setBusy(false);
+        return;
+    }
+
+    if (!response.ok || !response.body) {
+        const text = await response.text().catch(() => '');
+        console.error(`stream failed: ${response.status}`, text);
+        setBusy(false);
+        return;
+    }
+
     let assistant = addMessage('assistant', '');
     let buffer = '';
-
     const typingId = addTypingIndicator();
-    assistant.wrapper.hidden = true; // hide the empty placeholder until first token
+    assistant.wrapper.hidden = true;
 
-    es.addEventListener('token', (ev) => {
-        const { token } = JSON.parse(ev.data);
-        buffer += token;
-        // Replace typing indicator with the assistant bubble on first token
-        const t = document.getElementById(typingId);
-        if (t) {
-            t.remove();
+    let done = false;
+
+    const handlers = {
+        token: ({ token }) => {
+            buffer += token;
+            const t = document.getElementById(typingId);
+            if (t) {
+                t.remove();
+                assistant.wrapper.hidden = false;
+            }
+            assistant.contentEl.textContent = buffer;
+            scrollToBottom();
+        },
+        tool_call: ({ name }) => {
+            const badge = document.createElement('div');
+            badge.className = 'message-meta';
+            badge.textContent = `🔧 ${name}`;
+            assistant.wrapper.querySelector('.message-body').appendChild(badge);
+        },
+        tool_result: ({ name, ms }) => {
+            const badges = assistant.wrapper.querySelectorAll('.message-meta');
+            const last = badges[badges.length - 1];
+            if (last && last.textContent.startsWith('🔧')) {
+                last.textContent = `🔧 ${name} · ${ms}ms`;
+            }
+        },
+        done: (meta) => {
+            done = true;
+            const metaEl = document.createElement('div');
+            metaEl.className = 'message-meta';
+            const sec = (meta.totalMs / 1000).toFixed(1);
+            metaEl.textContent = `${meta.iterations} iter · ${sec}s`;
+            assistant.wrapper.querySelector('.message-body').appendChild(metaEl);
+            activeStream = null;
+            setBusy(false);
+        },
+        error: ({ message }) => {
+            const t = document.getElementById(typingId);
+            if (t) t.remove();
             assistant.wrapper.hidden = false;
-            // Re-grab contentEl since it was just appended (still valid ref)
-        }
-        assistant.contentEl.textContent = buffer;
-        scrollToBottom();
-    });
+            assistant.contentEl.textContent = buffer || '(sin respuesta)';
+            const errEl = document.createElement('div');
+            errEl.className = 'message-error';
+            errEl.textContent = `⚠ ${message}`;
+            assistant.wrapper.querySelector('.message-body').appendChild(errEl);
+            activeStream = null;
+            setBusy(false);
+        },
+    };
 
-    es.addEventListener('tool_call', (ev) => {
-        const { name } = JSON.parse(ev.data);
-        // Optional: append a small inline badge to the assistant body
-        const badge = document.createElement('div');
-        badge.className = 'message-meta';
-        badge.textContent = `🔧 ${name}`;
-        assistant.wrapper.querySelector('.message-body').appendChild(badge);
-    });
+    try {
+        await parseSseStream(response.body.getReader(), handlers);
+    } catch (err) {
+        console.error('stream parse error', err);
+    }
 
-    es.addEventListener('tool_result', (ev) => {
-        const { name, ms } = JSON.parse(ev.data);
-        const badges = assistant.wrapper.querySelectorAll('.message-meta');
-        const last = badges[badges.length - 1];
-        if (last && last.textContent.startsWith('🔧')) {
-            last.textContent = `🔧 ${name} · ${ms}ms`;
-        }
-    });
-
-    es.addEventListener('done', (ev) => {
-        const meta = JSON.parse(ev.data);
-        // Add final meta line
-        const metaEl = document.createElement('div');
-        metaEl.className = 'message-meta';
-        const sec = (meta.totalMs / 1000).toFixed(1);
-        metaEl.textContent = `${meta.iterations} iter · ${sec}s`;
-        assistant.wrapper.querySelector('.message-body').appendChild(metaEl);
-        es.close();
-        activeStream = null;
-        setBusy(false);
-    });
-
-    es.addEventListener('error', (ev) => {
-        if (es.readyState === EventSource.CLOSED) return;
+    if (!done) {
         const t = document.getElementById(typingId);
         if (t) t.remove();
         assistant.wrapper.hidden = false;
@@ -283,10 +423,9 @@ async function streamChat(question) {
         errEl.className = 'message-error';
         errEl.textContent = '⚠ Stream interrupted';
         assistant.wrapper.querySelector('.message-body').appendChild(errEl);
-        es.close();
         activeStream = null;
         setBusy(false);
-    });
+    }
 }
 
 // ─── New chat ───────────────────────────────────────────────
@@ -311,4 +450,8 @@ suggestions.forEach(card => {
 });
 
 // ─── Boot ───────────────────────────────────────────────────
-initSession().then(() => composerInput.focus());
+(async () => {
+    await bootstrapHmac();
+    await initSession();
+    composerInput.focus();
+})();

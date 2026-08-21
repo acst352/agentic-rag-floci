@@ -7,6 +7,7 @@ import { dirname, resolve } from "node:path";
 import { chatRoutes } from "./routes/chat.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { uiRoutes } from "./routes/ui.js";
+import { authBootstrapRoutes } from "./routes/auth-bootstrap.js";
 
 const HOST = process.env.HOST ?? "0.0.0.0";
 const PORT = Number(process.env.PORT ?? 3002);
@@ -40,6 +41,7 @@ async function buildServer() {
     uptime: process.uptime(),
   }));
 
+  await app.register(authBootstrapRoutes, { prefix: "/api" });
   await app.register(chatRoutes, { prefix: "/api" });
   await app.register(sessionRoutes, { prefix: "/api" });
   await app.register(uiRoutes);
