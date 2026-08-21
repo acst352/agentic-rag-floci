@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { ask, askStream } from "../agent/llm.js";
 import { saveSession, getSession } from "../session/store.js";
+import { buildHmacHook } from "../auth/middleware.js";
 
 const ChatBody = z.object({
   question: z.string().min(1),
@@ -32,7 +33,10 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     return { session_id: sessionId, ...result };
   });
 
-  app.get("/chat/stream", async (req, reply) => {
+  app.get(
+    "/chat/stream",
+    { preHandler: buildHmacHook() },
+    async (req, reply) => {
     const q = (req.query as Record<string, string>).q;
     const sessionId = (req.query as Record<string, string>).session_id ?? randomUUID();
 
@@ -92,5 +96,6 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     }
 
     reply.raw.end();
-  });
+    },
+  );
 };

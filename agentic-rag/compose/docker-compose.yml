@@ -103,6 +103,10 @@ services:
       - OLLAMA_HOST=http://ollama:11434
       - FLOCI_ENDPOINT=http://floci:4566
       - LLM_MODEL=qwen2.5:3b
+      - HMAC_SECRET=${HMAC_SECRET:?Set HMAC_SECRET in .env or shell before docker compose up}
+      - HMAC_KEY_ID=${HMAC_KEY_ID:-default}
+      - HMAC_WINDOW_SECONDS=${HMAC_WINDOW_SECONDS:-300}
+      - HMAC_AUTH_ENABLED=${HMAC_AUTH_ENABLED:-true}
     ports:
       - "3002:3002"
     depends_on:
