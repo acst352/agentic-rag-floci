@@ -22,7 +22,7 @@ async function buildServer() {
       transport:
         process.env.NODE_ENV === "production"
           ? undefined
-          : { target: "pino-pretty", options: { colorize: true } },
+          : { target: "pino-pretty", options: { colorize: true, translateTime: "HH:MM:ss.l" } },
     },
   });
 

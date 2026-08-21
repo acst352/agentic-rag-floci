@@ -70,5 +70,14 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
       keyId: config.keyId,
       timestamp: Number(req.headers[HMAC_TIMESTAMP_HEADER]),
     };
+    req.log.debug(
+      {
+        keyId: config.keyId,
+        timestamp: req.hmac.timestamp,
+        path: decodedPath,
+        method: req.method,
+      },
+      "hmac auth ok",
+    );
   };
 }
