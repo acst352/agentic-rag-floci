@@ -6,7 +6,7 @@ services:
       - "4566:4566"
     volumes:
       - floci-data:/var/lib/floci
-      - //./pipe/docker_engine:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - FLOCI_LOG_LEVEL=info
       - FLOCI_DATA_DIR=/var/lib/floci

@@ -1,0 +1,125 @@
+name: agentic-rag
+
+services:
+  # ============================================================
+  # net-aws-sim : servicios equivalentes a "AWS VPC"
+  # ============================================================
+  floci:
+    image: floci/floci:latest
+    container_name: floci
+    ports:
+      - "4566:4566"
+    volumes:
+      - floci-data:/var/lib/floci
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - FLOCI_LOG_LEVEL=info
+      - FLOCI_DATA_DIR=/var/lib/floci
+    restart: unless-stopped
+    networks:
+      - net-aws-sim
+
+  # ============================================================
+  # net-onprem-sim : servicios on-premises (DB + LLM)
+  # ============================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rag-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=rag
+      - POSTGRES_PASSWORD=rag
+      - POSTGRES_DB=rag
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d rag"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - net-onprem-sim
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - net-onprem-sim
+
+  # ============================================================
+  # Gateway: vive en AMBAS redes (simula VPN que expone
+  # únicamente el servicio MCP hacia AWS, no la DB directa)
+  # ============================================================
+  mcp-server:
+    build:
+      context: ../mcp-server
+      dockerfile: Dockerfile
+    container_name: rag-mcp-server
+    environment:
+      - DATABASE_URL=postgres://rag:rag@postgres:5432/rag
+      - OLLAMA_HOST=http://ollama:11434
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=3001
+      - EMBED_MODEL=nomic-embed-text
+      - LLM_MODEL=qwen2.5:3b
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - net-aws-sim
+      - net-onprem-sim
+
+  # ============================================================
+  # agent-api-server : el Agente (MCP Host).
+  # Lado AWS del agente: expone UI + API REST al browser.
+  # Vive en AMBAS redes (como mcp-server) porque en produccion
+  # Bedrock esta en AWS, pero aqui Ollama esta on-prem.
+  # Habla con mcp-server (gateway) para tools (search_documents).
+  # Habla directo con Ollama para el LLM (chat + tool calling).
+  # Persiste sesiones en DynamoDB de Floci.
+  # Solo expone UI en :3002 al host (modo dev).
+  # ============================================================
+  agent-api:
+    build:
+      context: ../agent
+      dockerfile: Dockerfile
+    container_name: rag-agent-api
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - LOG_LEVEL=info
+      - MCP_URL=http://mcp-server:3001/sse
+      - OLLAMA_HOST=http://ollama:11434
+      - FLOCI_ENDPOINT=http://floci:4566
+      - LLM_MODEL=qwen2.5:3b
+    ports:
+      - "3002:3002"
+    depends_on:
+      mcp-server:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - net-aws-sim
+      - net-onprem-sim
+
+networks:
+  net-aws-sim:
+    driver: bridge
+  net-onprem-sim:
+    driver: bridge
+
+volumes:
+  floci-data:
+  postgres-data:
+  ollama-data:

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Docker volumes (data persistente)
+floci-data/
+postgres-data/
+ollama-data/
+.tools/
+
+# OS
+Thumbs.db
+
+# Misc
+coverage/
+.tmp/
+.cache/
+
+# Carpetas que pueden regenerarse con tooling
+# (NO ignorar: drizzle/ — debe commitearse para que el Docker build funcione)
+# (NO ignorar: drizzle.config.ts — config de migraciones)
