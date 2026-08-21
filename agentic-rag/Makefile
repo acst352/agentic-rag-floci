@@ -6,6 +6,8 @@
 PROJECT      := agentic-rag
 COMPOSE_DIR  := compose
 COMPOSE_FILE := $(COMPOSE_DIR)/docker-compose.yml
+ENV_FILE     := $(COMPOSE_DIR)/.env
+ENV_EXAMPLE  := $(COMPOSE_DIR)/.env.example
 MCP_DIR      := mcp-server
 AGENT_DIR    := agent
 
@@ -13,12 +15,35 @@ AGENT_DIR    := agent
 export DATABASE_URL ?= postgres://rag:rag@localhost:5432/rag
 export OLLAMA_HOST  ?= http://localhost:11434
 
+# -----------------------------------------------------------------------------
+# Secrets (compose/.env). Se auto-genera si falta.
+# -----------------------------------------------------------------------------
+$(ENV_FILE):
+	@if [ ! -f $(ENV_FILE) ]; then \
+		HMAC_SECRET=$$(openssl rand -hex 32); \
+		printf 'HMAC_SECRET=%s\n' "$$HMAC_SECRET"          > $(ENV_FILE); \
+		printf 'HMAC_KEY_ID=local-dev\n'                   >> $(ENV_FILE); \
+		printf 'HMAC_WINDOW_SECONDS=300\n'                 >> $(ENV_FILE); \
+		printf 'HMAC_AUTH_ENABLED=true\n'                  >> $(ENV_FILE); \
+		printf '# Generated %s. DO NOT COMMIT.\n' "$$(date -Iseconds 2>/dev/null || date)" >> $(ENV_FILE); \
+		echo "[ok] $(ENV_FILE) creado con HMAC_SECRET aleatorio"; \
+	else \
+		echo "[ok] $(ENV_FILE) ya existe (no se sobreescribe)"; \
+	fi
+
+init-env: $(ENV_FILE) ## Crea compose/.env con HMAC_SECRET aleatorio si no existe
+
+show-env: $(ENV_FILE) ## Muestra el HMAC_SECRET y KEY_ID actuales (útil para curl)
+	@echo "HMAC_KEY_ID=$(shell grep '^HMAC_KEY_ID=' $(ENV_FILE) | cut -d= -f2-)"
+	@echo "HMAC_SECRET=$(shell grep '^HMAC_SECRET=' $(ENV_FILE) | cut -d= -f2-)"
+
 .DEFAULT_GOAL := help
 .PHONY: help up down restart build ps logs \
         pull-models migrate seed \
         dev-infra dev-mcp dev-agent \
         install typecheck test \
-        status reset clean
+        status reset clean \
+        init-env show-env
 
 # -----------------------------------------------------------------------------
 # Ayuda
@@ -30,16 +55,16 @@ help: ## Muestra esta ayuda
 # -----------------------------------------------------------------------------
 # Stack completo (Docker)
 # -----------------------------------------------------------------------------
-up: ## Levanta los 5 servicios en background
+up: $(ENV_FILE) ## Levanta los 5 servicios en background
 	cd $(COMPOSE_DIR) && docker compose up -d --build
 
 down: ## Para y elimina los contenedores (conserva volúmenes)
 	cd $(COMPOSE_DIR) && docker compose down
 
-restart: ## Reinicia los contenedores
+restart: $(ENV_FILE) ## Reinicia los contenedores
 	cd $(COMPOSE_DIR) && docker compose restart
 
-build: ## Reconstruye las imágenes sin caché
+build: $(ENV_FILE) ## Reconstruye las imágenes sin caché
 	cd $(COMPOSE_DIR) && docker compose build --no-cache
 
 ps: ## Estado de los servicios
@@ -64,7 +89,7 @@ migrate: ## Aplica las migraciones Drizzle al postgres
 seed: ## Genera embeddings e inserta los 10 documentos seed
 	cd $(MCP_DIR) && npm run seed
 
-bootstrap: up pull-models migrate seed ## Primera instalación completa
+bootstrap: $(ENV_FILE) up pull-models migrate seed ## Primera instalación completa
 
 # -----------------------------------------------------------------------------
 # Modo dev (código en host, infra en Docker)
