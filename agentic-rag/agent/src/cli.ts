@@ -48,6 +48,11 @@ async function main() {
 
   await saveSession({
     session_id: sessionId,
+    // v1.3 H-03: el CLI no pasa por el hook HMAC. Usamos el
+    // HMAC_KEY_ID como subject por defecto, alineado con el
+    // bootstrap de la UI; si en el futuro se quiere multiusuario
+    // en CLI, este punto es donde se lee el subject del entorno.
+    user_id: process.env.HMAC_KEY_ID ?? "cli",
     created_at: new Date().toISOString(),
     last_query: question,
     last_response: result.response,

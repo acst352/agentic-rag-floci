@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { ask, askStream } from "../agent/llm.js";
-import { saveSession, getSession } from "../session/store.js";
+import { saveSession } from "../session/store.js";
 
 const ChatBody = z.object({
   question: z.string().min(1),
@@ -21,12 +21,18 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     }
     const { question, session_id } = parsed.data;
     const sessionId = session_id ?? randomUUID();
+    // v1.3 H-03 (PRD §4, §13, SEC-03): la sesión queda anclada al
+    // subject verificado por el hook HMAC. Si el caller envía un
+    // session_id existente, debe pertenecerle; si no, creamos una
+    // nueva con su subject como propietario.
+    const subject = req.hmac?.subject ?? "";
 
     req.log.info({ sessionId, q_len: question.length }, "chat request");
 
     const result = await ask(question);
     await saveSession({
       session_id: sessionId,
+      user_id: subject,
       created_at: new Date().toISOString(),
       last_query: question,
       last_response: result.response,
@@ -39,6 +45,7 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
   app.get("/chat/stream", async (req, reply) => {
     const q = (req.query as Record<string, string>).q;
     const sessionId = (req.query as Record<string, string>).session_id ?? randomUUID();
+    const subject = req.hmac?.subject ?? "";
 
     if (!q || q.length < 1) {
       return reply.badRequest("Query param 'q' is required");
@@ -77,6 +84,7 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
             iterations = event.iterations;
             await saveSession({
               session_id: sessionId,
+              user_id: subject,
               created_at: new Date().toISOString(),
               last_query: q,
               last_response: fullResponse,
