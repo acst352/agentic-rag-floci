@@ -43,7 +43,8 @@ show-env: $(ENV_FILE) ## Muestra el HMAC_SECRET y KEY_ID actuales (útil para cu
         dev-infra dev-mcp dev-agent \
         install typecheck test \
         status reset clean \
-        init-env show-env
+        init-env show-env \
+        ingest ingest-watch ingest-watch-logs
 
 # -----------------------------------------------------------------------------
 # Ayuda
@@ -117,6 +118,29 @@ typecheck: ## tsc --noEmit en ambos paquetes
 test: ## Vitest en ambos paquetes (cuando se añada)
 	cd $(MCP_DIR)  && npm test
 	cd $(AGENT_DIR) && npm test
+
+# -----------------------------------------------------------------------------
+# Ingestion pipeline (v1.5.0)
+# -----------------------------------------------------------------------------
+# `make ingest FILE=<path>` procesa un archivo puntual contra el
+# mcp-server corriendo en docker. El path se monta relativo a
+# /data/ingestion (volumen ingestion-data).
+ingest: ## Procesa un archivo vía mcp-server: make ingest FILE=foo.md
+	@if [ -z "$(FILE)" ]; then \
+		echo "uso: make ingest FILE=<nombre>   (sin ruta, vive en /data/ingestion)"; \
+		exit 2; \
+	fi
+	cd $(COMPOSE_DIR) && docker compose exec -T mcp-server \
+		npm run ingest -- /data/ingestion/$(FILE)
+
+# `make ingest-watch` arranca el watcher en foreground (Ctrl+C
+# para parar). Para background, usar ingest-watch-bg (TODO v1.5.x).
+ingest-watch: ## Vigila /data/ingestion en foreground
+	cd $(COMPOSE_DIR) && docker compose exec -T mcp-server \
+		npm run ingest:watch
+
+ingest-watch-logs: ## Logs del watcher si corre en background
+	cd $(COMPOSE_DIR) && docker compose logs -f --tail=100 mcp-server
 
 # -----------------------------------------------------------------------------
 # Diagnóstico y limpieza

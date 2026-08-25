@@ -70,6 +70,11 @@ services:
       - MCP_PORT=3001
       - EMBED_MODEL=nomic-embed-text
       - LLM_MODEL=qwen2.5:3b
+      # v1.5.0 ingestion pipeline:
+      - INGEST_WATCH_DIR=/data/ingestion
+      - JOBS_STORE=${JOBS_STORE:-dynamo}
+      - JOBS_TABLE=${JOBS_TABLE:-ingestion_jobs}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     # PRD section 13 v1.2: el puerto 3001 deja de publicarse en el host.
     # Solo es alcanzable dentro de las redes net-aws-sim y net-onprem-sim,
     # lo que respeta SEC-29 (sin puertos innecesarios publicados) y el
@@ -79,6 +84,10 @@ services:
     # (perfil a habilitar si se necesita).
     expose:
       - "3001"
+    volumes:
+      # v1.5.0: volumen para que el watcher (npm run ingest:watch)
+      # vea los archivos que caen en /data/ingestion.
+      - ingestion-data:/data/ingestion
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,3 +143,7 @@ volumes:
   floci-data:
   postgres-data:
   ollama-data:
+  # v1.5.0: volumen para el watcher de ingesta. Persiste entre
+  # reboots del servicio mcp-server. Los archivos que caen aquí
+  # son procesados automáticamente (npm run ingest:watch).
+  ingestion-data:
