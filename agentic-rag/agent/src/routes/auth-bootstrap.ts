@@ -36,7 +36,7 @@ export const authBootstrapRoutes: FastifyPluginAsync = async (app) => {
         cached = {
           keyId: cfg.keyId,
           secret: cfg.secret,
-          windowSeconds: cfg.windowSeconds ?? 300,
+          windowSeconds: cfg.windowSeconds ?? 60,
           enabled: true,
         };
       } catch (err) {

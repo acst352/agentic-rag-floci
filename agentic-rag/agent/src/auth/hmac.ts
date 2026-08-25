@@ -3,12 +3,11 @@ import { createHmac, timingSafeEqual, createHash } from "node:crypto";
 export const HMAC_TIMESTAMP_HEADER = "x-floci-timestamp";
 export const HMAC_KEY_ID_HEADER = "x-floci-key-id";
 export const HMAC_SIGNATURE_HEADER = "x-floci-signature";
-// v1.2 H-05: nonce requerido. La constante se declara aquí en H-04
-// para que cliente y servidor la puedan importar de forma estable;
-// la exigencia del header llega en el commit H-05.
 export const HMAC_NONCE_HEADER = "x-floci-nonce";
 
-export const DEFAULT_HMAC_WINDOW_SECONDS = 300;
+// v1.2 H-05 (PRD §13): ventana reducida de 300 a 60 segundos.
+// Se mantiene configurable vía HMAC_WINDOW_SECONDS en el entorno.
+export const DEFAULT_HMAC_WINDOW_SECONDS = 60;
 
 export type HeaderLookup = Record<string, string | string[] | undefined>;
 
@@ -17,6 +16,7 @@ export interface HmacConfig {
   keyId: string;
   windowSeconds?: number;
   nowSeconds?: () => number;
+  nonces?: NonceStore;
 }
 
 export interface CanonicalRequest {
@@ -105,6 +105,47 @@ function readHeader(headers: HeaderLookup, name: string): string | undefined {
   return undefined;
 }
 
+/**
+ * v1.2 H-05 (PRD §13): NonceStore en memoria con TTL.
+ * Limitación consciente: en un despliegue multi-instancia, cada
+ * agente tendría su propio Map. En producción v2.0 se sustituirá
+ * por una tabla DynamoDB con TTL nativo (SEC-08).
+ */
+export class NonceStore {
+  private readonly store = new Map<string, number>();
+  private readonly windowSeconds: number;
+  private readonly gcInterval: NodeJS.Timeout;
+
+  constructor(windowSeconds: number) {
+    this.windowSeconds = windowSeconds;
+    this.gcInterval = setInterval(() => this.gc(), windowSeconds * 1000);
+    if (typeof this.gcInterval.unref === "function") this.gcInterval.unref();
+  }
+
+  consume(nonce: string, nowMs: number): boolean {
+    if (this.store.has(nonce)) return false;
+    this.store.set(nonce, nowMs + this.windowSeconds * 1000);
+    return true;
+  }
+
+  reset(): void {
+    this.store.clear();
+  }
+
+  size(): number {
+    return this.store.size;
+  }
+
+  private gc(): void {
+    const now = Date.now();
+    for (const [n, exp] of this.store) {
+      if (exp < now) this.store.delete(n);
+    }
+  }
+}
+
+const defaultNonces = new NonceStore(DEFAULT_HMAC_WINDOW_SECONDS);
+
 export function verifyRequest(
   headers: HeaderLookup,
   req: Omit<CanonicalRequest, "timestamp">,
@@ -119,9 +160,13 @@ export function verifyRequest(
   const tsHeader = readHeader(headers, HMAC_TIMESTAMP_HEADER);
   const sigHeader = readHeader(headers, HMAC_SIGNATURE_HEADER);
   const keyHeader = readHeader(headers, HMAC_KEY_ID_HEADER);
+  const nonceHeader = readHeader(headers, HMAC_NONCE_HEADER);
 
   if (!tsHeader || !sigHeader || !keyHeader) {
     return { ok: false, reason: "missing_auth_headers" };
+  }
+  if (!nonceHeader) {
+    return { ok: false, reason: "missing_nonce" };
   }
 
   const timestamp = Number(tsHeader);
@@ -148,6 +193,12 @@ export function verifyRequest(
   }
   if (!timingSafeEqual(a, b)) {
     return { ok: false, reason: "signature_mismatch" };
+  }
+
+  // v1.2 H-05: anti-replay con nonce único por request.
+  const nonces = cfg.nonces ?? defaultNonces;
+  if (!nonces.consume(nonceHeader, cfg.nowSeconds!() * 1000)) {
+    return { ok: false, reason: "nonce_replay" };
   }
 
   return { ok: true };

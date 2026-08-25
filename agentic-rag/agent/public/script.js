@@ -40,6 +40,7 @@ let busy = false;
 const HMAC_TS_HEADER = 'X-Floci-Timestamp';
 const HMAC_KEY_HEADER = 'X-Floci-Key-Id';
 const HMAC_SIG_HEADER = 'X-Floci-Signature';
+const HMAC_NONCE_HEADER = 'X-Floci-Nonce';
 
 let hmacConfig = null;
 
@@ -84,9 +85,24 @@ function canonicalizePath(path) {
     return `${pathname}?${params}`;
 }
 
+/**
+ * v1.2 H-05: genera un nonce único por request. crypto.randomUUID()
+ * está disponible en navegadores modernos y en contextos seguros.
+ */
+function generateNonce() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    // Fallback improbable (browsers modernos lo soportan)
+    return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
 async function signRequest(method, pathWithQuery, body) {
     if (!hmacConfig || !hmacConfig.enabled) return {};
     const timestamp = Math.floor(Date.now() / 1000);
+    const nonce = generateNonce();
     const bodyStr = body ?? '';
     const bodyHash = await sha256Hex(bodyStr);
     const canonicalPath = canonicalizePath(pathWithQuery);
@@ -95,6 +111,7 @@ async function signRequest(method, pathWithQuery, body) {
     return {
         [HMAC_TS_HEADER]: String(timestamp),
         [HMAC_KEY_HEADER]: hmacConfig.keyId,
+        [HMAC_NONCE_HEADER]: nonce,
         [HMAC_SIG_HEADER]: signature,
     };
 }
