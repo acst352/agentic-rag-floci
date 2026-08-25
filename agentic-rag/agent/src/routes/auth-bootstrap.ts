@@ -12,6 +12,20 @@ export const authBootstrapRoutes: FastifyPluginAsync = async (app) => {
   let cached: AuthBootstrapResponse | null = null;
 
   app.get("/auth/config", async (req, reply) => {
+    // v1.2 H-01 (PRD §4, §13): el secreto HMAC nunca debe salir del
+    // servidor en un entorno expuesto. Bloqueamos con 404 cualquier
+    // arranque de producción; la demo local sigue funcionando porque
+    // NODE_ENV se deja sin asignar o !== 'production' por defecto.
+    // Sustitución completa por POST /api/auth/token con firma
+    // server-side: planificada para v1.3.x.
+    if (process.env.NODE_ENV === "production") {
+      req.log.warn(
+        { ip: req.ip },
+        "blocked auth bootstrap in production (H-01 containment)",
+      );
+      return reply.code(404).send({ error: "not_found" });
+    }
+
     if (process.env.HMAC_AUTH_ENABLED === "false") {
       return reply.code(204).send();
     }

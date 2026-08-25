@@ -26,7 +26,17 @@ async function buildServer() {
     },
   });
 
-  await app.register(cors, { origin: true });
+  // v1.2 H-01 (PRD §4, §13): CORS restringido a allowlist explícita.
+  // `origin: true` reflejaba cualquier Origin del cliente, lo que junto
+  // con la fuga de /api/auth/config hacía al control HMAC decorativo.
+  const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "http://localhost:3002,http://localhost:5173")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  await app.register(cors, {
+    origin: corsOrigins,
+    credentials: true,
+  });
   await app.register(sensible);
   await app.register(fastifyStatic, {
     root: publicDir,
