@@ -3,7 +3,6 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { ask, askStream } from "../agent/llm.js";
 import { saveSession, getSession } from "../session/store.js";
-import { buildHmacHook } from "../auth/middleware.js";
 
 const ChatBody = z.object({
   question: z.string().min(1),
@@ -11,6 +10,10 @@ const ChatBody = z.object({
 });
 
 export const chatRoutes: FastifyPluginAsync = async (app) => {
+  // v1.2 H-02 (PRD §4, §13): el hook HMAC se aplica como addHook
+  // global onRequest en server.ts. Esta ruta ya no necesita
+  // configurar preHandler propio.
+
   app.post("/chat", async (req, reply) => {
     const parsed = ChatBody.safeParse(req.body);
     if (!parsed.success) {
@@ -33,10 +36,7 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     return { session_id: sessionId, ...result };
   });
 
-  app.get(
-    "/chat/stream",
-    { preHandler: buildHmacHook() },
-    async (req, reply) => {
+  app.get("/chat/stream", async (req, reply) => {
     const q = (req.query as Record<string, string>).q;
     const sessionId = (req.query as Record<string, string>).session_id ?? randomUUID();
 
@@ -96,6 +96,5 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     }
 
     reply.raw.end();
-    },
-  );
+  });
 };

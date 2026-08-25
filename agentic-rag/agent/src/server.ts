@@ -8,6 +8,7 @@ import { chatRoutes } from "./routes/chat.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { uiRoutes } from "./routes/ui.js";
 import { authBootstrapRoutes } from "./routes/auth-bootstrap.js";
+import { buildHmacHook } from "./auth/middleware.js";
 
 const HOST = process.env.HOST ?? "0.0.0.0";
 const PORT = Number(process.env.PORT ?? 3002);
@@ -49,6 +50,22 @@ async function buildServer() {
     service: "agent-api",
     version: "0.2.0",
     uptime: process.uptime(),
+  }));
+
+  // v1.2 H-02 (PRD §4, §13): el hook HMAC se aplica globalmente como
+  // onRequest. Por defecto TODA ruta requiere firma; la allowlist
+  // exceptúa las rutas públicas necesarias. Cualquier ruta nueva
+  // queda protegida por defecto — eso cierra el bypass por rutas
+  // equivalentes sin protección.
+  app.addHook("onRequest", buildHmacHook({
+    allowlist: [
+      { method: "GET", path: "/health" },
+      // /api/auth/config está gateado por NODE_ENV en producción (H-01).
+      // En dev sigue siendo la única forma de obtener el secreto.
+      { method: "GET", path: "/api/auth/config" },
+      // UI estática servida por @fastify/static (prefijo "/").
+      { method: "GET", pathPrefix: "/" },
+    ],
   }));
 
   await app.register(authBootstrapRoutes, { prefix: "/api" });

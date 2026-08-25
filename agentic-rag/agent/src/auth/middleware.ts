@@ -20,7 +20,33 @@ declare module "fastify" {
 export interface HmacMiddlewareOptions {
   config?: HmacConfig;
   enabled?: boolean;
+  /**
+   * v1.2 H-02 (PRD §4, §13): rutas exentas de HMAC.
+   * Coincidencia exacta (`path`) o por prefijo (`pathPrefix`).
+   * Se aplica ANTES de la verificación HMAC. La comparación de path
+   * ignora la query string.
+   */
+  allowlist?: Array<{ method?: string; path?: string; pathPrefix?: string }>;
 }
+
+function isAllowlisted(
+  req: FastifyRequest,
+  allowlist: HmacMiddlewareOptions["allowlist"],
+): boolean {
+  if (!allowlist || allowlist.length === 0) return false;
+  const method = req.method.toUpperCase();
+  const pathOnly = req.url.split("?")[0];
+  for (const rule of allowlist) {
+    if (rule.method && rule.method.toUpperCase() !== method) continue;
+    if (rule.path && pathOnly !== rule.path) continue;
+    if (rule.pathPrefix && !pathOnly.startsWith(rule.pathPrefix)) continue;
+    return true;
+  }
+  return false;
+}
+
+// Exportado para tests unitarios sin levantar Fastify.
+export const _isAllowlisted = isAllowlisted;
 
 export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
   const enabled = options.enabled ?? process.env.HMAC_AUTH_ENABLED !== "false";
@@ -37,16 +63,18 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
     reply: FastifyReply,
   ): Promise<void> {
     if (!enabled || !config) return;
+    if (isAllowlisted(req, options.allowlist)) return;
 
     const body = req.body ?? "";
     const bodyString = typeof body === "string" ? body : JSON.stringify(body);
 
-    const decodedPath = req.routeOptions?.url ?? req.url;
+    // Sin canonicación todavía (eso entra en H-04). Aquí se firma tal
+    // cual la URL llega; cliente y servidor deben coincidir exactamente.
     const result = verifyRequest(
       req.headers,
       {
         method: req.method,
-        path: decodedPath,
+        path: req.url,
         body: bodyString,
       },
       config,
@@ -54,7 +82,7 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
 
     if (!result.ok) {
       req.log.warn(
-        { reason: result.reason, path: decodedPath, method: req.method },
+        { reason: result.reason, path: req.url, method: req.method },
         "hmac auth rejected",
       );
       reply.header(HMAC_TIMESTAMP_HEADER, HMAC_TIMESTAMP_HEADER);
@@ -74,7 +102,7 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
       {
         keyId: config.keyId,
         timestamp: req.hmac.timestamp,
-        path: decodedPath,
+        path: req.url,
         method: req.method,
       },
       "hmac auth ok",
