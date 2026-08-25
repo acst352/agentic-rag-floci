@@ -258,6 +258,7 @@ Fix: usar modelo más pequeño (`qwen2.5:1.5b`) o tener paciencia
 - [ ] Hacer al agente un contenedor en `net-aws-sim` (más fiel a prod).
 - [x] **v1.1.0** — Autenticación HMAC en `GET /api/chat/stream`. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
 - [x] **v1.2.0** — Contención HMAC (PRD §13). Cierra **H-01, H-02, H-04, H-05**: hook global `onRequest` con allowlist, CORS allowlist, canonical path con query string ordenada, nonce único por request (`X-Floci-Nonce`), ventana 60 s. `/api/auth/config` bloqueado en producción. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
+- [x] **v1.2.1** — Hardening de contenedores (PRD §13). Contenedores corren como `node` no-root, el puerto `3001` (mcp-server) deja de publicarse en el host, y el prompt del usuario ya no aparece en el log de aplicación (SEC-16, queda solo `q_len` como metadato). El script `mcp-server/test-client.mjs` debe ejecutarse ahora dentro del contenedor: `docker compose exec mcp-server node dist/test-client.mjs`.
 - [ ] Sustituir Ollama por Bedrock en producción (cambiar `OLLAMA_HOST` →
       `BEDROCK_ENDPOINT`, swap del cliente).
 - [ ] Pipeline de ingesta continuo (S3 → embeddings → pgvector).
