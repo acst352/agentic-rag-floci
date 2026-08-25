@@ -12,11 +12,12 @@
 //   done        → { session_id, iterations, totalMs }
 //   error       → { message }
 //
-// HMAC auth (v1.1.0):
-//   Bootstrap: GET /api/auth/config → { keyId, secret, windowSeconds, enabled }
+// HMAC auth (v1.2):
+//   Bootstrap (dev only): GET /api/auth/config → { keyId, secret, windowSeconds, enabled }
 //   For each /api/chat/stream request, compute HMAC-SHA256 over:
-//     `${timestamp}\n${method}\n${path}\n${sha256(body)}`
-//   and send headers: X-Floci-Timestamp, X-Floci-Key-Id, X-Floci-Signature.
+//     `${timestamp}\n${method}\n${pathWithSortedQuery}\n${sha256(body)}`
+//   Headers: X-Floci-Timestamp, X-Floci-Key-Id, X-Floci-Signature.
+//   pathWithSortedQuery incluye la query string ordenada alfabéticamente.
 //   Implementation uses Web Crypto (SubtleCrypto) — no external deps.
 
 const sidebar = document.getElementById('sidebar');
@@ -66,12 +67,30 @@ async function hmacSha256Hex(secret, input) {
         .join('');
 }
 
-async function signRequest(method, path, body) {
+/**
+ * v1.2 H-04: ordena alfabéticamente los pares clave=valor de la query
+ * string para que la firma sea estable independientemente del orden
+ * de llegada de los parámetros en la URL.
+ */
+function canonicalizePath(path) {
+    const qIdx = path.indexOf('?');
+    if (qIdx === -1) return path;
+    const pathname = path.slice(0, qIdx);
+    const query = path.slice(qIdx + 1);
+    const params = Array.from(new URLSearchParams(query).entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('&');
+    return `${pathname}?${params}`;
+}
+
+async function signRequest(method, pathWithQuery, body) {
     if (!hmacConfig || !hmacConfig.enabled) return {};
     const timestamp = Math.floor(Date.now() / 1000);
     const bodyStr = body ?? '';
     const bodyHash = await sha256Hex(bodyStr);
-    const canonical = `${timestamp}\n${method.toUpperCase()}\n${path}\n${bodyHash}`;
+    const canonicalPath = canonicalizePath(pathWithQuery);
+    const canonical = `${timestamp}\n${method.toUpperCase()}\n${canonicalPath}\n${bodyHash}`;
     const signature = await hmacSha256Hex(hmacConfig.secret, canonical);
     return {
         [HMAC_TS_HEADER]: String(timestamp),
@@ -331,7 +350,10 @@ async function streamChat(question) {
 
     let headers = { Accept: 'text/event-stream' };
     try {
-        const sig = await signRequest('GET', path, '');
+        // v1.2 H-04: firmamos la URL completa con query string, que es
+        // lo que enviaremos al servidor. El servidor ordena los
+        // parámetros alfabéticamente antes de verificar la firma.
+        const sig = await signRequest('GET', url, '');
         headers = { ...headers, ...sig };
     } catch (err) {
         console.error('Failed to sign request', err);

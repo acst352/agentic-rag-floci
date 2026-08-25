@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCanonicalString,
+  canonicalizePath,
   computeSignature,
   loadHmacConfigFromEnv,
   signRequest,
@@ -104,6 +105,42 @@ function createSha256Marker(input: string): string {
   const { createHash } = require("node:crypto") as typeof import("node:crypto");
   return createHash("sha256").update(input).digest("hex");
 }
+
+describe("canonicalizePath (H-04)", () => {
+  it("returns path unchanged when there is no query string", () => {
+    expect(canonicalizePath("/api/chat/stream")).toBe("/api/chat/stream");
+  });
+
+  it("appends query string unchanged when only one parameter", () => {
+    expect(canonicalizePath("/api/chat/stream?q=hola")).toBe(
+      "/api/chat/stream?q=hola",
+    );
+  });
+
+  it("sorts query parameters alphabetically by key", () => {
+    expect(canonicalizePath("/x?b=2&a=1")).toBe("/x?a=1&b=2");
+    expect(canonicalizePath("/x?z=1&a=2&m=3")).toBe("/x?a=2&m=3&z=1");
+  });
+
+  it("is stable across reorders of the same parameters", () => {
+    expect(canonicalizePath("/x?a=1&b=2&c=3")).toBe(
+      canonicalizePath("/x?c=3&a=1&b=2"),
+    );
+  });
+
+  it("URL-encodes special characters in keys and values", () => {
+    expect(canonicalizePath("/x?q=hello%20world&session=abc")).toBe(
+      "/x?q=hello%20world&session=abc",
+    );
+    expect(canonicalizePath("/x?key%20with%20space=value")).toBe(
+      "/x?key%20with%20space=value",
+    );
+  });
+
+  it("accepts explicit query parameter (bypasses inline parsing)", () => {
+    expect(canonicalizePath("/x", "z=9")).toBe("/x?z=9");
+  });
+});
 
 describe("computeSignature", () => {
   it("is deterministic", () => {
@@ -288,6 +325,73 @@ describe("verifyRequest", () => {
     );
     expect(afterExpiry.ok).toBe(false);
     expect(afterExpiry.reason).toBe("timestamp_out_of_window");
+  });
+});
+
+describe("verifyRequest — H-04 query string", () => {
+  it("accepts a request signed over a query string", () => {
+    const pathWithQuery = "/api/chat/stream?q=vacaciones";
+    const headers = signedHeadersFor("GET", pathWithQuery, "");
+    const canonicalPath = canonicalizePath(pathWithQuery);
+    const result = verifyRequest(
+      headers,
+      { method: "GET", path: canonicalPath, body: "" },
+      baseConfig,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects when the query parameter value is altered after signing (H-04)", () => {
+    const headers = signedHeadersFor("GET", "/api/chat/stream?q=vacaciones", "");
+    const result = verifyRequest(
+      headers,
+      {
+        method: "GET",
+        path: "/api/chat/stream?q=soy%20administrador",
+        body: "",
+      },
+      baseConfig,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("signature_mismatch");
+  });
+
+  it("accepts reordering of query parameters (H-04)", () => {
+    const headers = signedHeadersFor(
+      "GET",
+      "/api/chat/stream?q=hola&session_id=abc",
+      "",
+    );
+    // El servidor (middleware.ts) normaliza el orden antes de pasar
+    // el path a verifyRequest; el test simula ese paso.
+    const canonicalPath = canonicalizePath(
+      "/api/chat/stream?session_id=abc&q=hola",
+    );
+    const result = verifyRequest(
+      headers,
+      {
+        method: "GET",
+        path: canonicalPath,
+        body: "",
+      },
+      baseConfig,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects when a query parameter is added after signing", () => {
+    const headers = signedHeadersFor("GET", "/api/chat/stream?q=hola", "");
+    const result = verifyRequest(
+      headers,
+      {
+        method: "GET",
+        path: "/api/chat/stream?q=hola&extra=injected",
+        body: "",
+      },
+      baseConfig,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("signature_mismatch");
   });
 });
 

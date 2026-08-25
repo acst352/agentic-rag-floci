@@ -3,6 +3,10 @@ import { createHmac, timingSafeEqual, createHash } from "node:crypto";
 export const HMAC_TIMESTAMP_HEADER = "x-floci-timestamp";
 export const HMAC_KEY_ID_HEADER = "x-floci-key-id";
 export const HMAC_SIGNATURE_HEADER = "x-floci-signature";
+// v1.2 H-05: nonce requerido. La constante se declara aquí en H-04
+// para que cliente y servidor la puedan importar de forma estable;
+// la exigencia del header llega en el commit H-05.
+export const HMAC_NONCE_HEADER = "x-floci-nonce";
 
 export const DEFAULT_HMAC_WINDOW_SECONDS = 300;
 
@@ -30,6 +34,35 @@ export interface VerificationResult {
 const sha256Hex = (input: string | Buffer): string =>
   createHash("sha256").update(input).digest("hex");
 
+/**
+ * v1.2 H-04 (PRD §4, §13): el path canónico incluye la query string
+ * ordenada alfabéticamente por clave. Esto garantiza que firmas
+ * coincidan independientemente del orden de llegada de los parámetros.
+ *
+ * Si rawQuery se pasa explícitamente (recomendado desde middleware),
+ * se ordena y se concatena. Si no, se intenta extraer de rawPath.
+ */
+export function canonicalizePath(rawPath: string, rawQuery?: string | null): string {
+  let path = rawPath;
+  let query = rawQuery ?? null;
+
+  if (query == null) {
+    const qIdx = path.indexOf("?");
+    if (qIdx === -1) return path;
+    query = path.slice(qIdx + 1);
+    path = path.slice(0, qIdx);
+  }
+
+  if (!query) return path;
+
+  const params = new URLSearchParams(query);
+  const sorted = Array.from(params.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+  return `${path}?${sorted}`;
+}
+
 export function buildCanonicalString(req: CanonicalRequest): string {
   const bodyHash = sha256Hex(req.body ?? "");
   return `${req.timestamp}\n${req.method.toUpperCase()}\n${req.path}\n${bodyHash}`;
@@ -50,7 +83,12 @@ export function signRequest(
 } {
   const nowSeconds = config.nowSeconds ?? (() => Math.floor(Date.now() / 1000));
   const timestamp = req.timestamp ?? Math.floor(nowSeconds());
-  const canonical = buildCanonicalString({ ...req, timestamp });
+  // v1.2 H-04: firmar sobre el path canónico (con query string
+  // ordenada). El servidor hace la misma normalización antes de
+  // verificar; de lo contrario firmas para "a=1&b=2" y "b=2&a=1" no
+  // coincidirían.
+  const canonicalPath = canonicalizePath(req.path);
+  const canonical = buildCanonicalString({ ...req, path: canonicalPath, timestamp });
   const signature = computeSignature(config.secret, canonical);
   return { timestamp, signature, keyId: config.keyId, canonical };
 }

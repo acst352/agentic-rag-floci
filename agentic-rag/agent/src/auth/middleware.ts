@@ -3,6 +3,7 @@ import {
   HMAC_KEY_ID_HEADER,
   HMAC_SIGNATURE_HEADER,
   HMAC_TIMESTAMP_HEADER,
+  canonicalizePath,
   loadHmacConfigFromEnv,
   verifyRequest,
   type HmacConfig,
@@ -68,13 +69,16 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
     const body = req.body ?? "";
     const bodyString = typeof body === "string" ? body : JSON.stringify(body);
 
-    // Sin canonicación todavía (eso entra en H-04). Aquí se firma tal
-    // cual la URL llega; cliente y servidor deben coincidir exactamente.
+    // v1.2 H-04 (PRD §4, §13): el path canónico incluye la query
+    // string ordenada alfabéticamente. Usamos req.url (URL completa
+    // solicitada), no req.routeOptions.url (plantilla de la ruta en
+    // Fastify v5 que devuelve "/api/chat/stream", no la URL real).
+    const canonicalPath = canonicalizePath(req.url);
     const result = verifyRequest(
       req.headers,
       {
         method: req.method,
-        path: req.url,
+        path: canonicalPath,
         body: bodyString,
       },
       config,
@@ -82,7 +86,7 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
 
     if (!result.ok) {
       req.log.warn(
-        { reason: result.reason, path: req.url, method: req.method },
+        { reason: result.reason, path: canonicalPath, method: req.method },
         "hmac auth rejected",
       );
       reply.header(HMAC_TIMESTAMP_HEADER, HMAC_TIMESTAMP_HEADER);
@@ -102,7 +106,7 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
       {
         keyId: config.keyId,
         timestamp: req.hmac.timestamp,
-        path: req.url,
+        path: canonicalPath,
         method: req.method,
       },
       "hmac auth ok",
