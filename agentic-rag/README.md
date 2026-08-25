@@ -257,6 +257,7 @@ Fix: usar modelo más pequeño (`qwen2.5:1.5b`) o tener paciencia
 
 - [ ] Hacer al agente un contenedor en `net-aws-sim` (más fiel a prod).
 - [x] **v1.1.0** — Autenticación HMAC en `GET /api/chat/stream`. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
+- [x] **v1.2.0** — Contención HMAC (PRD §13). Cierra **H-01, H-02, H-04, H-05**: hook global `onRequest` con allowlist, CORS allowlist, canonical path con query string ordenada, nonce único por request (`X-Floci-Nonce`), ventana 60 s. `/api/auth/config` bloqueado en producción. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
 - [ ] Sustituir Ollama por Bedrock en producción (cambiar `OLLAMA_HOST` →
       `BEDROCK_ENDPOINT`, swap del cliente).
 - [ ] Pipeline de ingesta continuo (S3 → embeddings → pgvector).
@@ -264,19 +265,25 @@ Fix: usar modelo más pequeño (`qwen2.5:1.5b`) o tener paciencia
 
 ### HMAC auth quick reference
 
-`GET /api/chat/stream` exige tres headers:
+Todos los endpoints `/api` exigen cuatro headers (v1.2 hook global):
 
 ```
 X-Floci-Timestamp: <epoch seconds>
 X-Floci-Key-Id:    <HMAC_KEY_ID>
-X-Floci-Signature: hex(HMAC_SHA256(HMAC_SECRET, "<ts>\nGET\n/api/chat/stream\n<sha256(body)>"))
+X-Floci-Nonce:     <uuid v4 único por request>
+X-Floci-Signature: hex(HMAC_SHA256(HMAC_SECRET, "<ts>\n<METHOD>\n<path?sorted-query>\n<sha256(body)>"))
 ```
+
+`path?sorted-query` es la URL solicitada con los parámetros de query
+ordenados alfabéticamente por clave. El prompt del usuario (`?q=...`)
+entra así en la firma.
 
 Configurar el secreto antes de `make up`:
 
 ```bash
 export HMAC_SECRET=$(openssl rand -hex 32)
 export HMAC_KEY_ID=local-dev
+export CORS_ALLOWED_ORIGINS=http://localhost:3002
 make up
 ```
 
