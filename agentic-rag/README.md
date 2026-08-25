@@ -259,6 +259,7 @@ Fix: usar modelo más pequeño (`qwen2.5:1.5b`) o tener paciencia
 - [x] **v1.1.0** — Autenticación HMAC en `GET /api/chat/stream`. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
 - [x] **v1.2.0** — Contención HMAC (PRD §13). Cierra **H-01, H-02, H-04, H-05**: hook global `onRequest` con allowlist, CORS allowlist, canonical path con query string ordenada, nonce único por request (`X-Floci-Nonce`), ventana 60 s. `/api/auth/config` bloqueado en producción. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
 - [x] **v1.2.1** — Hardening de contenedores (PRD §13). Contenedores corren como `node` no-root, el puerto `3001` (mcp-server) deja de publicarse en el host, y el prompt del usuario ya no aparece en el log de aplicación (SEC-16, queda solo `q_len` como metadato). El script `mcp-server/test-client.mjs` debe ejecutarse ahora dentro del contenedor: `docker compose exec mcp-server node dist/test-client.mjs`.
+- [x] **v1.3.0** — Cierre H-03 IDOR (PRD §13). Cada request lleva a un quinto header (`X-Floci-Subject`) firmado en la cadena canónica; las sesiones pertenecen a un `user_id` y `GET /api/sessions/:id` devuelve 404 si la sesión es de otro subject. La respuesta 404 es indistinguible del caso "no existe" para no facilitar enumeración. La identidad por defecto en dev es el `HMAC_KEY_ID`; en producción será el `sub` del OIDC. Ver [docs/hmac-auth.md](docs/hmac-auth.md).
 - [ ] Sustituir Ollama por Bedrock en producción (cambiar `OLLAMA_HOST` →
       `BEDROCK_ENDPOINT`, swap del cliente).
 - [ ] Pipeline de ingesta continuo (S3 → embeddings → pgvector).
@@ -266,13 +267,14 @@ Fix: usar modelo más pequeño (`qwen2.5:1.5b`) o tener paciencia
 
 ### HMAC auth quick reference
 
-Todos los endpoints `/api` exigen cuatro headers (v1.2 hook global):
+Todos los endpoints `/api` exigen cinco headers (v1.3 hook global):
 
 ```
 X-Floci-Timestamp: <epoch seconds>
 X-Floci-Key-Id:    <HMAC_KEY_ID>
 X-Floci-Nonce:     <uuid v4 único por request>
-X-Floci-Signature: hex(HMAC_SHA256(HMAC_SECRET, "<ts>\n<METHOD>\n<path?sorted-query>\n<sha256(body)>"))
+X-Floci-Subject:   <identidad lógica del llamante, p.ej. HMAC_KEY_ID en dev>
+X-Floci-Signature: hex(HMAC_SHA256(HMAC_SECRET, "<ts>\n<METHOD>\n<path?sorted-query>\n<sha256(body)>\n<subject>"))
 ```
 
 `path?sorted-query` es la URL solicitada con los parámetros de query
