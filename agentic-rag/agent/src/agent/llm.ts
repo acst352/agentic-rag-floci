@@ -3,6 +3,7 @@ import type { Message, Tool as OllamaTool } from "ollama";
 import { listMcpTools, callMcpTool } from "./mcpClient.js";
 import { mcpToolsToOllama } from "./tools.js";
 import { wrapContextBlock } from "./contextWrap.js";
+import { enforceGrounding } from "./grounding.js";
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? "http://localhost:11434";
 const LLM_MODEL = process.env.LLM_MODEL ?? "qwen2.5:3b";
@@ -51,6 +52,9 @@ export interface AgentResult {
   iterations: number;
   toolCalls: Array<{ name: string; args: unknown; result: string }>;
   totalMs: number;
+  // v1.4 H-06 / SEC-20: indica si la respuesta pasó la verificación
+  // de fundamentación o fue sustituida por una abstención.
+  grounded: boolean;
 }
 
 export type AgentEvent =
@@ -63,6 +67,7 @@ export type AgentEvent =
       iterations: number;
       toolCalls: AgentResult["toolCalls"];
       totalMs: number;
+      grounded: boolean;
     };
 
 export async function* askStream(question: string): AsyncGenerator<AgentEvent> {
@@ -73,6 +78,11 @@ export async function* askStream(question: string): AsyncGenerator<AgentEvent> {
     { role: "user", content: question },
   ];
   const toolCalls: AgentResult["toolCalls"] = [];
+  // v1.4 H-06 / SEC-20: acumulador de todas las fuentes declaradas
+  // por las herramientas durante la conversación. Se vacía al inicio
+  // y se va nutriendo en cada tool call; lo usa enforceGrounding al
+  // final para decidir si citó al menos una.
+  const collectedSources: string[] = [];
   let fullResponse = "";
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
@@ -99,12 +109,20 @@ export async function* askStream(question: string): AsyncGenerator<AgentEvent> {
     }
 
     if (pendingToolCalls.length === 0) {
+      // v1.4 H-06 / SEC-20: aplicamos la verificación de
+      // fundamentación sobre la respuesta final antes de emitirla.
+      // Si el modelo no cita ninguna fuente, sustituimos por la
+      // abstención. No tocamos el stream ya emitido — los tokens
+      // enviados al cliente reflejan el texto original; solo el
+      // evento `done` lleva la versión definitiva.
+      const grounding = enforceGrounding(accumulatedContent, collectedSources);
       yield {
         type: "done",
-        response: accumulatedContent,
+        response: grounding.response,
         iterations: i + 1,
         toolCalls,
         totalMs: Date.now() - t0,
+        grounded: grounding.kind === "grounded",
       };
       return;
     }
@@ -129,20 +147,30 @@ export async function* askStream(question: string): AsyncGenerator<AgentEvent> {
       // envolvemos en delimitadores <<CONTEXT_*>> para que el
       // modelo distinga el canal "instrucción" del canal "dato".
       // También extraemos las fuentes declaradas por la herramienta
-      // para que el grounding check (SEC-20, próximo commit) pueda
-      // verificar que la respuesta final cita al menos una.
+      // para que el grounding check (SEC-20) pueda verificar que
+      // la respuesta final cita al menos una.
       const sources = extractSourcesFromToolResult(result);
+      for (const s of sources) {
+        if (!collectedSources.includes(s)) collectedSources.push(s);
+      }
       const wrapped = wrapContextBlock(result, { source: fn.name, sources });
       messages.push({ role: "tool", content: wrapped });
     }
   }
 
+  // Al agotar iteraciones, también aplicamos grounding sobre el
+  // texto acumulado. La señal de "no convergió" se mantiene en el
+  // texto, pero si hay fuentes y no se citaron, sustituimos por
+  // abstención para no exponer contenido sin respaldo.
+  const fallback = fullResponse || "El agente no pudo converger en el número máximo de iteraciones.";
+  const grounding = enforceGrounding(fallback, collectedSources);
   yield {
     type: "done",
-    response: fullResponse || "El agente no pudo converger en el número máximo de iteraciones.",
+    response: grounding.response,
     iterations: MAX_ITERATIONS,
     toolCalls,
     totalMs: Date.now() - t0,
+    grounded: grounding.kind === "grounded",
   };
 }
 
@@ -151,6 +179,7 @@ export async function ask(question: string): Promise<AgentResult> {
   const toolCalls: AgentResult["toolCalls"] = [];
   let iterations = 0;
   let totalMs = 0;
+  let grounded = true;
   for await (const event of askStream(question)) {
     switch (event.type) {
       case "token":
@@ -164,11 +193,17 @@ export async function ask(question: string): Promise<AgentResult> {
       case "done":
         iterations = event.iterations;
         totalMs = event.totalMs;
-        if (!response) response = event.response;
+        grounded = event.grounded;
+        // v1.4 H-06 / SEC-20: la respuesta definitiva puede ser la
+        // abstención sustituyendo a los tokens ya emitidos. Usamos
+        // event.response cuando difiere de lo que el stream mostró.
+        if (!response || event.response !== response) {
+          response = event.response;
+        }
         break;
     }
   }
-  return { response, iterations, toolCalls, totalMs };
+  return { response, iterations, toolCalls, totalMs, grounded };
 }
 
 function parseArgs(raw: unknown): Record<string, unknown> {

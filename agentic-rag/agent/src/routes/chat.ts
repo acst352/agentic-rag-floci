@@ -118,17 +118,29 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
             break;
           case "done":
             iterations = event.iterations;
+            // v1.4 H-06 / SEC-20: si la verificación de
+            // fundamentación sustituyó la respuesta por abstención,
+            // el evento `done` lleva la versión definitiva. La
+            // persistimos en la sesión y emitimos un evento
+            // adicional `abstain` para que el front-end pueda
+            // reemplazar el buffer de tokens que ya se mostró.
+            const persistedResponse = event.grounded ? fullResponse : event.response;
             await saveSession({
               session_id: sessionId,
               user_id: subject,
               created_at: new Date().toISOString(),
               last_query: safeQ,
-              last_response: fullResponse,
+              last_response: persistedResponse,
               iterations,
             });
             reply.raw.write(
-              `event: done\ndata: ${JSON.stringify({ session_id: sessionId, iterations, totalMs: event.totalMs })}\n\n`,
+              `event: done\ndata: ${JSON.stringify({ session_id: sessionId, iterations, totalMs: event.totalMs, grounded: event.grounded })}\n\n`,
             );
+            if (!event.grounded) {
+              reply.raw.write(
+                `event: abstain\ndata: ${JSON.stringify({ message: event.response })}\n\n`,
+              );
+            }
             break;
         }
       }

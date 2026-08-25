@@ -437,10 +437,21 @@ async function streamChat(question) {
             const metaEl = document.createElement('div');
             metaEl.className = 'message-meta';
             const sec = (meta.totalMs / 1000).toFixed(1);
-            metaEl.textContent = `${meta.iterations} iter · ${sec}s`;
+            const groundedTag = meta.grounded === false ? ' · sin fundamento' : '';
+            metaEl.textContent = `${meta.iterations} iter · ${sec}s${groundedTag}`;
             assistant.wrapper.querySelector('.message-body').appendChild(metaEl);
             activeStream = null;
             setBusy(false);
+        },
+        // v1.4 H-06 / SEC-20: el servidor sustituye la respuesta por
+        // una abstención cuando la fundamentación falla. El cliente
+        // descarta los tokens emitidos y muestra el mensaje de
+        // abstención; el evento `done` (arriba) lleva `grounded:false`.
+        abstain: ({ message }) => {
+            buffer = message ?? '';
+            if (assistant && assistant.contentEl) {
+                assistant.contentEl.textContent = buffer;
+            }
         },
         error: ({ message }) => {
             const t = document.getElementById(typingId);
