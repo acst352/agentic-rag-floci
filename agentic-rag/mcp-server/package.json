@@ -9,21 +9,31 @@
     "dev": "tsx watch src/index.ts",
     "seed": "tsx src/rag/seed.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "ingest": "tsx src/ingestion/cli.ts",
+    "ingest:watch": "tsx src/ingestion/watcher.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.703.0",
+    "@aws-sdk/lib-dynamodb": "^3.703.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
+    "chokidar": "^3.6.0",
     "drizzle-orm": "^0.36.4",
     "express": "^4.21.1",
     "pg": "^8.13.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/chokidar": "^1.7.5",
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.1",
     "@types/pg": "^8.11.10",
     "drizzle-kit": "^0.28.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
