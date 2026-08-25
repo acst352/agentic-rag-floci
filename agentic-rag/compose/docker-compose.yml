@@ -70,8 +70,15 @@ services:
       - MCP_PORT=3001
       - EMBED_MODEL=nomic-embed-text
       - LLM_MODEL=qwen2.5:3b
-    ports:
-      - "3001:3001"
+    # PRD section 13 v1.2: el puerto 3001 deja de publicarse en el host.
+    # Solo es alcanzable dentro de las redes net-aws-sim y net-onprem-sim,
+    # lo que respeta SEC-29 (sin puertos innecesarios publicados) y el
+    # principio de aislamiento AWS <-> on-prem del diseno original.
+    # Para depuracion local: 'docker compose exec mcp-server wget -qO-
+    # http://localhost:3001/health' o 'docker compose --profile debug up'
+    # (perfil a habilitar si se necesita).
+    expose:
+      - "3001"
     depends_on:
       postgres:
         condition: service_healthy

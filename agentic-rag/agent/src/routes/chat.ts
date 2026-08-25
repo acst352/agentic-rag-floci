@@ -22,7 +22,7 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     const { question, session_id } = parsed.data;
     const sessionId = session_id ?? randomUUID();
 
-    req.log.info({ sessionId, question }, "chat request");
+    req.log.info({ sessionId, q_len: question.length }, "chat request");
 
     const result = await ask(question);
     await saveSession({
@@ -44,7 +44,7 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
       return reply.badRequest("Query param 'q' is required");
     }
 
-    req.log.info({ sessionId, q }, "chat stream request");
+    req.log.info({ sessionId, q_len: q.length }, "chat stream request");
 
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
