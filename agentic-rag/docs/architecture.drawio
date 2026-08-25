@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="agentic-rag-architecture" name="Architecture v1.1.0">
-        <mxGraphModel dx="852" dy="632" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1556" dy="509" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -208,7 +208,7 @@
                 <mxCell id="23" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://elysian01.github.io/Rasa-Chatbot-UI/static/img/homepage-bot.png;" parent="1" vertex="1">
                     <mxGeometry x="120" y="530" width="70" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="24" value="Próximo:&lt;br&gt;v1.2.0 — Pipeline ingesta S3&lt;br&gt;v2.0.0 — Bedrock swap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CCFFFF;strokeColor=#22c55e;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;strokeWidth=2;" vertex="1" parent="1">
+                <mxCell id="24" value="Próximo:&lt;br&gt;v1.2.0 — Pipeline ingesta desde S3&lt;br&gt;v2.0.0 — Bedrock swap&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Observaciones antes de pasar a Ingesta S3:&lt;/div&gt;&lt;div&gt;Corregir protección de clave secreta en tránsito (HMAC)&lt;br&gt;Rediseñar flujo de ingesta de datos.&lt;/div&gt;&lt;div&gt;La V2 sería el ingestor y el resto sería Bedrock&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CCFFFF;strokeColor=#22c55e;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;strokeWidth=2;" parent="1" vertex="1">
                     <mxGeometry x="421" y="700" width="319" height="180" as="geometry"/>
                 </mxCell>
             </root>
