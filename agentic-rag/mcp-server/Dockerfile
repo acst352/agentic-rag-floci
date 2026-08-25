@@ -15,5 +15,7 @@ RUN npm install --omit=dev --no-audit --no-fund
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./drizzle
 COPY drizzle.config.ts ./
+RUN chown -R node:node /app
 EXPOSE 3001
+USER node
 CMD ["node", "dist/index.js"]

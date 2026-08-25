@@ -14,5 +14,7 @@ COPY package.json yarn.lock* ./
 RUN yarn install --production --frozen-lockfile || yarn install --production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
+RUN chown -R node:node /app
 EXPOSE 3002
+USER node
 CMD ["node", "dist/server.js"]
