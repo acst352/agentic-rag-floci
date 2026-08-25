@@ -18,6 +18,7 @@ for (const doc of policyDocuments) {
     source: doc.source,
     content: doc.content,
     embedding: vector,
+    chunk_id: `${doc.source}:0`,
   });
   console.log(`  [${elapsed}ms] ${doc.source} (${vector.length} dims)`);
 }
