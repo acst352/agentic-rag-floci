@@ -5,6 +5,11 @@ export const HMAC_KEY_ID_HEADER = "x-floci-key-id";
 export const HMAC_SIGNATURE_HEADER = "x-floci-signature";
 export const HMAC_NONCE_HEADER = "x-floci-nonce";
 
+// v1.3 H-03 (PRD §4, §13): subject firmado. Es la identidad lógica
+// del llamante; en producción será el `sub` del OIDC. En desarrollo
+// se reutiliza el HMAC_KEY_ID como subject por defecto.
+export const HMAC_SUBJECT_HEADER = "x-floci-subject";
+
 // v1.2 H-05 (PRD §13): ventana reducida de 300 a 60 segundos.
 // Se mantiene configurable vía HMAC_WINDOW_SECONDS en el entorno.
 export const DEFAULT_HMAC_WINDOW_SECONDS = 60;
@@ -14,6 +19,13 @@ export type HeaderLookup = Record<string, string | string[] | undefined>;
 export interface HmacConfig {
   secret: string;
   keyId: string;
+  /**
+   * v1.3 H-03: subject por defecto cuando el cliente no envía
+   * `X-Floci-Subject`. Útil en la transición desde v1.2.x donde el
+   * header no existía; en v2.0 será obligatorio y este default caerá.
+   * Si no se define, se exige el header (recommended).
+   */
+  defaultSubject?: string;
   windowSeconds?: number;
   nowSeconds?: () => number;
   nonces?: NonceStore;
@@ -24,11 +36,18 @@ export interface CanonicalRequest {
   path: string;
   body: string | Buffer;
   timestamp: number;
+  // v1.3 H-03: subject (identidad lógica del llamante). Requerido
+  // por signRequest (quien firma) y por buildCanonicalString; lo
+  // omite el caller de verifyRequest porque el servidor lo lee del
+  // header X-Floci-Subject.
+  subject?: string;
 }
 
 export interface VerificationResult {
   ok: boolean;
   reason?: string;
+  // v1.3 H-03: subject verificado (vacío si ok === false).
+  subject?: string;
 }
 
 const sha256Hex = (input: string | Buffer): string =>
@@ -65,7 +84,12 @@ export function canonicalizePath(rawPath: string, rawQuery?: string | null): str
 
 export function buildCanonicalString(req: CanonicalRequest): string {
   const bodyHash = sha256Hex(req.body ?? "");
-  return `${req.timestamp}\n${req.method.toUpperCase()}\n${req.path}\n${bodyHash}`;
+  // v1.3 H-03: la cadena canónica incluye el subject como quinto
+  // campo, al final. Mantener el subject en la firma garantiza que
+  // un atacante con una firma capturada no pueda suplantar la
+  // identidad del llamante; sin este campo, GET /api/sessions/:id
+  // sería vulnerable a IDOR incluso con HMAC válido.
+  return `${req.timestamp}\n${req.method.toUpperCase()}\n${req.path}\n${bodyHash}\n${req.subject ?? ""}`;
 }
 
 export function computeSignature(secret: string, canonical: string): string {
@@ -73,7 +97,12 @@ export function computeSignature(secret: string, canonical: string): string {
 }
 
 export function signRequest(
-  req: Omit<CanonicalRequest, "timestamp"> & { timestamp?: number },
+  req: Omit<CanonicalRequest, "timestamp" | "subject"> & {
+    timestamp?: number;
+    // v1.3 H-03: el subject es obligatorio al firmar; quien firma
+    // declara explícitamente bajo qué identidad emite la firma.
+    subject: string;
+  },
   config: Pick<HmacConfig, "secret" | "keyId" | "nowSeconds">,
 ): {
   timestamp: number;
@@ -161,12 +190,25 @@ export function verifyRequest(
   const sigHeader = readHeader(headers, HMAC_SIGNATURE_HEADER);
   const keyHeader = readHeader(headers, HMAC_KEY_ID_HEADER);
   const nonceHeader = readHeader(headers, HMAC_NONCE_HEADER);
+  // v1.3 H-03: subject leído del header. Si está vacío, cae al
+  // defaultSubject configurado (compatibilidad transitoria desde
+  // v1.2.x donde el header no existía); si no hay default, se
+  // rechaza con missing_subject.
+  const subjectHeader = readHeader(headers, HMAC_SUBJECT_HEADER);
 
   if (!tsHeader || !sigHeader || !keyHeader) {
     return { ok: false, reason: "missing_auth_headers" };
   }
   if (!nonceHeader) {
     return { ok: false, reason: "missing_nonce" };
+  }
+
+  let subject = subjectHeader ?? "";
+  if (!subject) {
+    if (!cfg.defaultSubject) {
+      return { ok: false, reason: "missing_subject" };
+    }
+    subject = cfg.defaultSubject;
   }
 
   const timestamp = Number(tsHeader);
@@ -183,7 +225,7 @@ export function verifyRequest(
     return { ok: false, reason: "unknown_key_id" };
   }
 
-  const canonical = buildCanonicalString({ ...req, timestamp });
+  const canonical = buildCanonicalString({ ...req, timestamp, subject });
   const expected = computeSignature(cfg.secret, canonical);
 
   const a = Buffer.from(expected, "hex");
@@ -201,7 +243,7 @@ export function verifyRequest(
     return { ok: false, reason: "nonce_replay" };
   }
 
-  return { ok: true };
+  return { ok: true, subject };
 }
 
 export function loadHmacConfigFromEnv(env: NodeJS.ProcessEnv = process.env): HmacConfig {
@@ -215,9 +257,15 @@ export function loadHmacConfigFromEnv(env: NodeJS.ProcessEnv = process.env): Hma
   const windowRaw = env.HMAC_WINDOW_SECONDS;
   const windowSeconds =
     windowRaw && Number.isFinite(Number(windowRaw)) ? Number(windowRaw) : undefined;
+  const defaultSubject = env.HMAC_SUBJECT;
   return {
     secret,
     keyId,
     ...(windowSeconds !== undefined ? { windowSeconds } : {}),
+    // v1.3 H-03: si HMAC_SUBJECT está en el entorno, se usa como
+    // identidad por defecto cuando el cliente no envía
+    // X-Floci-Subject. En desarrollo esto evita romper clientes que
+    // aún no propagan el header. En v2.0 este fallback caerá.
+    ...(defaultSubject ? { defaultSubject } : {}),
   };
 }

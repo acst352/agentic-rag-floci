@@ -13,11 +13,15 @@ import {
   HMAC_SIGNATURE_HEADER,
   HMAC_TIMESTAMP_HEADER,
   HMAC_NONCE_HEADER,
+  HMAC_SUBJECT_HEADER,
   type HeaderLookup,
 } from "../../src/auth/hmac";
 
 const SECRET = "test-secret-do-not-use-in-prod";
 const KEY_ID = "test-key";
+// v1.3 H-03: subject por defecto en tests. Coincide con KEY_ID
+// para preservar los escenarios legacy (single-tenant dev).
+const SUBJECT = "test-subject";
 const NOW = 1_700_000_000;
 
 const baseConfig = {
@@ -31,10 +35,17 @@ function signedHeadersFor(
   method: string,
   path: string,
   body: string,
-  overrides: { timestamp?: number; keyId?: string; secret?: string; nonce?: string } = {},
+  overrides: {
+    timestamp?: number;
+    keyId?: string;
+    secret?: string;
+    nonce?: string;
+    subject?: string;
+  } = {},
 ): HeaderLookup {
+  const subject = overrides.subject ?? SUBJECT;
   const { timestamp, signature } = signRequest(
-    { method, path, body },
+    { method, path, body, subject },
     {
       secret: overrides.secret ?? SECRET,
       keyId: overrides.keyId ?? KEY_ID,
@@ -46,6 +57,7 @@ function signedHeadersFor(
     [HMAC_KEY_ID_HEADER]: overrides.keyId ?? KEY_ID,
     [HMAC_SIGNATURE_HEADER]: signature,
     [HMAC_NONCE_HEADER]: overrides.nonce ?? randomUUID(),
+    [HMAC_SUBJECT_HEADER]: subject,
   };
 }
 
@@ -56,9 +68,10 @@ describe("buildCanonicalString", () => {
       path: "/api/chat/stream",
       body: "",
       timestamp: NOW,
+      subject: SUBJECT,
     });
     expect(canonical).toMatch(
-      /^1700000000\nGET\n\/api\/chat\/stream\n[0-9a-f]{64}$/,
+      /^1700000000\nGET\n\/api\/chat\/stream\n[0-9a-f]{64}\ntest-subject$/,
     );
   });
 
@@ -68,12 +81,14 @@ describe("buildCanonicalString", () => {
       path: "/api/sessions",
       body: '{"a":1}',
       timestamp: NOW,
+      subject: SUBJECT,
     });
     const b = buildCanonicalString({
       method: "POST",
       path: "/api/sessions",
       body: '{"a":1}',
       timestamp: NOW,
+      subject: SUBJECT,
     });
     expect(a).toEqual(b);
   });
@@ -84,12 +99,14 @@ describe("buildCanonicalString", () => {
       path: "/x",
       body: "",
       timestamp: NOW,
+      subject: SUBJECT,
     });
     const upper = buildCanonicalString({
       method: "GET",
       path: "/x",
       body: "",
       timestamp: NOW,
+      subject: SUBJECT,
     });
     expect(lower).toEqual(upper);
   });
@@ -100,8 +117,30 @@ describe("buildCanonicalString", () => {
       path: "/x",
       body: "",
       timestamp: NOW,
+      subject: SUBJECT,
     });
-    expect(empty.endsWith(createSha256Marker(""))).toBe(true);
+    expect(empty.endsWith(createSha256Marker("") + `\n${SUBJECT}`)).toBe(true);
+  });
+
+  // v1.3 H-03
+  it("includes subject as the fifth field", () => {
+    const a = buildCanonicalString({
+      method: "GET",
+      path: "/x",
+      body: "",
+      timestamp: NOW,
+      subject: "alice",
+    });
+    const b = buildCanonicalString({
+      method: "GET",
+      path: "/x",
+      body: "",
+      timestamp: NOW,
+      subject: "bob",
+    });
+    expect(a).not.toEqual(b);
+    expect(a.endsWith("\nalice")).toBe(true);
+    expect(b.endsWith("\nbob")).toBe(true);
   });
 });
 
@@ -169,7 +208,9 @@ describe("verifyRequest", () => {
       { method: "GET", path: "/api/chat/stream", body: "" },
       baseConfig,
     );
-    expect(result).toEqual({ ok: true });
+    // v1.3 H-03: la verificación ahora devuelve también el subject
+    // verificado para que el middleware lo propague a las rutas.
+    expect(result).toEqual({ ok: true, subject: SUBJECT });
   });
 
   it("rejects when timestamp is outside the window", () => {
@@ -300,6 +341,9 @@ it("is case-insensitive when reading headers", () => {
       [HMAC_KEY_ID_HEADER.toUpperCase()]: headers[HMAC_KEY_ID_HEADER],
       [HMAC_SIGNATURE_HEADER.toUpperCase()]: headers[HMAC_SIGNATURE_HEADER],
       [HMAC_NONCE_HEADER.toUpperCase()]: headers[HMAC_NONCE_HEADER],
+      // v1.3 H-03: el subject header también debe sobrevivir al
+      // case swap.
+      [HMAC_SUBJECT_HEADER.toUpperCase()]: headers[HMAC_SUBJECT_HEADER],
     };
     const result = verifyRequest(
       swapped,
@@ -410,6 +454,24 @@ describe("loadHmacConfigFromEnv", () => {
     expect(cfg).toEqual({ secret: "s", keyId: "k", windowSeconds: 120 });
   });
 
+  it("loads defaultSubject when HMAC_SUBJECT is provided (v1.3 H-03)", () => {
+    const cfg = loadHmacConfigFromEnv({
+      HMAC_SECRET: "s",
+      HMAC_KEY_ID: "k",
+      HMAC_SUBJECT: "alice",
+    });
+    expect(cfg.defaultSubject).toBe("alice");
+  });
+
+  it("omits defaultSubject when HMAC_SUBJECT is empty", () => {
+    const cfg = loadHmacConfigFromEnv({
+      HMAC_SECRET: "s",
+      HMAC_KEY_ID: "k",
+      HMAC_SUBJECT: "",
+    });
+    expect(cfg.defaultSubject).toBeUndefined();
+  });
+
   it("throws when required vars are missing", () => {
     expect(() => loadHmacConfigFromEnv({})).toThrow(/HMAC_SECRET/);
     expect(() => loadHmacConfigFromEnv({ HMAC_SECRET: "s" })).toThrow(/HMAC_KEY_ID/);
@@ -429,7 +491,7 @@ describe("loadHmacConfigFromEnv", () => {
 // Para los tests H-05, cada test usa su propio NonceStore para evitar
 // acoplamiento por el singleton de módulo; el nonce_replay test
 // comparte nonce explícitamente dentro del mismo test.
-function makeConfig(overrides: { nowSeconds?: () => number; windowSeconds?: number; nonces?: NonceStore } = {}) {
+function makeConfig(overrides: { nowSeconds?: () => number; windowSeconds?: number; nonces?: NonceStore; defaultSubject?: string } = {}) {
   return {
     secret: SECRET,
     keyId: KEY_ID,
@@ -531,5 +593,62 @@ describe("NonceStore", () => {
     store.consume(randomUUID(), NOW * 1000);
     store.consume(randomUUID(), NOW * 1000);
     expect(store.size()).toBe(2);
+  });
+});
+
+// ─── v1.3 H-03 (PRD §4, §13): subject en la cadena canónica ─────
+describe("verifyRequest — H-03 subject", () => {
+  it("rejects when subject header is missing and no defaultSubject configured", () => {
+    const headers = signedHeadersFor("GET", "/api/chat/stream", "");
+    delete headers[HMAC_SUBJECT_HEADER];
+    const result = verifyRequest(
+      headers,
+      { method: "GET", path: "/api/chat/stream", body: "" },
+      makeConfig(),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("missing_subject");
+  });
+
+  it("accepts the configured defaultSubject when the header is absent", () => {
+    const headers = signedHeadersFor("GET", "/api/chat/stream", "", {
+      subject: "alice",
+    });
+    delete headers[HMAC_SUBJECT_HEADER];
+    const result = verifyRequest(
+      headers,
+      { method: "GET", path: "/api/chat/stream", body: "" },
+      makeConfig({ defaultSubject: "alice" }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.subject).toBe("alice");
+  });
+
+  it("returns the verified subject on success", () => {
+    const headers = signedHeadersFor("GET", "/api/chat/stream", "", {
+      subject: "carol",
+    });
+    const result = verifyRequest(
+      headers,
+      { method: "GET", path: "/api/chat/stream", body: "" },
+      makeConfig(),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.subject).toBe("carol");
+  });
+
+  it("rejects when the header subject does not match the signed subject", () => {
+    const headers = signedHeadersFor("GET", "/api/chat/stream", "", {
+      subject: "alice",
+    });
+    // Atacante sustituye el subject sin re-firmar.
+    headers[HMAC_SUBJECT_HEADER] = "bob";
+    const result = verifyRequest(
+      headers,
+      { method: "GET", path: "/api/chat/stream", body: "" },
+      makeConfig(),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("signature_mismatch");
   });
 });

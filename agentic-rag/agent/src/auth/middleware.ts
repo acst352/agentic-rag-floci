@@ -14,6 +14,9 @@ declare module "fastify" {
     hmac?: {
       keyId: string;
       timestamp: number;
+      // v1.3 H-03: subject verificado, propagado a las rutas para
+      // que puedan aplicar autorización a nivel de recurso.
+      subject: string;
     };
   }
 }
@@ -101,6 +104,9 @@ export function buildHmacHook(options: HmacMiddlewareOptions = {}) {
     req.hmac = {
       keyId: config.keyId,
       timestamp: Number(req.headers[HMAC_TIMESTAMP_HEADER]),
+      // v1.3 H-03: el subject es la identidad lógica del llamante;
+      // las rutas lo usan para autorizar el acceso a sus recursos.
+      subject: result.subject ?? "",
     };
     req.log.debug(
       {

@@ -41,6 +41,10 @@ const HMAC_TS_HEADER = 'X-Floci-Timestamp';
 const HMAC_KEY_HEADER = 'X-Floci-Key-Id';
 const HMAC_SIG_HEADER = 'X-Floci-Signature';
 const HMAC_NONCE_HEADER = 'X-Floci-Nonce';
+// v1.3 H-03: identidad lógica del llamante, firmada en la cadena
+// canónica. En dev es el HMAC_KEY_ID; en producción será el `sub`
+// del OIDC.
+const HMAC_SUBJ_HEADER = 'X-Floci-Subject';
 
 let hmacConfig = null;
 
@@ -106,13 +110,18 @@ async function signRequest(method, pathWithQuery, body) {
     const bodyStr = body ?? '';
     const bodyHash = await sha256Hex(bodyStr);
     const canonicalPath = canonicalizePath(pathWithQuery);
-    const canonical = `${timestamp}\n${method.toUpperCase()}\n${canonicalPath}\n${bodyHash}`;
+    // v1.3 H-03: el subject entra en la cadena canónica como quinto
+    // campo. Si no llega del bootstrap (versión v1.2.x), caemos al
+    // keyId para preservar la compatibilidad transitoria.
+    const subject = hmacConfig.subject ?? hmacConfig.keyId ?? '';
+    const canonical = `${timestamp}\n${method.toUpperCase()}\n${canonicalPath}\n${bodyHash}\n${subject}`;
     const signature = await hmacSha256Hex(hmacConfig.secret, canonical);
     return {
         [HMAC_TS_HEADER]: String(timestamp),
         [HMAC_KEY_HEADER]: hmacConfig.keyId,
         [HMAC_NONCE_HEADER]: nonce,
         [HMAC_SIG_HEADER]: signature,
+        [HMAC_SUBJ_HEADER]: subject,
     };
 }
 

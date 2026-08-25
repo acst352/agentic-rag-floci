@@ -6,6 +6,10 @@ interface AuthBootstrapResponse {
   secret: string;
   windowSeconds: number;
   enabled: boolean;
+  // v1.3 H-03: subject que el cliente debe firmar. Por defecto es
+  // el HMAC_KEY_ID (modo dev single-tenant); en producción se
+  // sustituirá por el `sub` del OIDC. Configurable vía HMAC_SUBJECT.
+  subject: string;
 }
 
 export const authBootstrapRoutes: FastifyPluginAsync = async (app) => {
@@ -38,6 +42,10 @@ export const authBootstrapRoutes: FastifyPluginAsync = async (app) => {
           secret: cfg.secret,
           windowSeconds: cfg.windowSeconds ?? 60,
           enabled: true,
+          // v1.3 H-03: si no hay defaultSubject explícito, usamos
+          // el keyId para preservar el comportamiento dev
+          // single-tenant de v1.2.x.
+          subject: cfg.defaultSubject ?? cfg.keyId,
         };
       } catch (err) {
         req.log.error({ err }, "HMAC bootstrap failed");
